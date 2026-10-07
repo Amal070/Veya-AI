@@ -1,0 +1,304 @@
+@import "tailwindcss";
+
+/*
+  Design tokens — Veya
+  -------------------------------------------------------------------------
+  Subject: a voice-first AI interview coach. The orb IS the product; the
+  whole screen exists to support one continuous spoken conversation.
+
+  Palette:
+    --bg            #0A0A0F   deep space, near-black with a hint of violet
+    --surface       rgba(255,255,255,.04)  glass card fill
+    --surface-2     rgba(255,255,255,.07)  elevated glass (hover/active)
+    --border-glass  rgba(255,255,255,.08)
+    --violet        #8B5CF6   gradient anchor 1 (listening / idle presence)
+    --cyan          #22D3EE   gradient anchor 2 (speaking / active)
+    --amber         #FBBF24   single reserved accent — muted/warning state only
+    --text-hi       #F4F4F7
+    --text-mid      #A8A6B3
+    --text-low      #6B6876
+
+  Type: Space Grotesk for display/wordmark (geometric, technical, carries
+  the "voice AI" personality); Inter for body/transcript (quiet, legible,
+  doesn't compete with the orb).
+*/
+
+@theme {
+  --color-bg: #070711;
+  --color-bg-alt: #0b0b16;
+  --color-surface: rgba(255, 255, 255, 0.04);
+  --color-surface-2: rgba(255, 255, 255, 0.07);
+  --color-surface-3: rgba(255, 255, 255, 0.1);
+  --color-border-glass: rgba(255, 255, 255, 0.08);
+  --color-border-glow: rgba(34, 211, 238, 0.2);
+  --color-violet: #8b5cf6;
+  --color-purple-glow: #a855f7;
+  --color-cyan: #22d3ee;
+  --color-electric-blue: #3b82f6;
+  --color-amber: #fbbf24;
+  --color-text-hi: #f4f4f7;
+  --color-text-mid: #a8a6b3;
+  --color-text-low: #6b6876;
+  --font-display: "Space Grotesk", sans-serif;
+  --font-heading: "Outfit", "Space Grotesk", sans-serif;
+  --font-body: "Inter", -apple-system, BlinkMacSystemFont, "Segoe UI", sans-serif;
+}
+
+:root {
+  color-scheme: dark;
+  font: 16px/1.5 var(--font-body);
+  -webkit-font-smoothing: antialiased;
+  -moz-osx-font-smoothing: grayscale;
+}
+
+body {
+  margin: 0;
+  min-height: 100svh;
+  background-color: var(--color-bg);
+  background-image:
+    radial-gradient(ellipse 90% 60% at 50% -15%, rgba(139, 92, 246, 0.18), transparent),
+    radial-gradient(ellipse 70% 50% at 85% 60%, rgba(34, 211, 238, 0.09), transparent),
+    radial-gradient(ellipse 60% 40% at 15% 90%, rgba(59, 130, 246, 0.08), transparent);
+  background-attachment: fixed;
+  color: var(--color-text-hi);
+  overflow-x: hidden;
+}
+
+#root {
+  min-height: 100svh;
+}
+
+p {
+  margin: 0;
+}
+
+::-webkit-scrollbar {
+  width: 6px;
+}
+::-webkit-scrollbar-track {
+  background: transparent;
+}
+::-webkit-scrollbar-thumb {
+  background: rgba(255, 255, 255, 0.12);
+  border-radius: 8px;
+}
+
+/* Glass surface utility — the structural material every card/panel uses. */
+.glass {
+  background: var(--color-surface);
+  border: 1px solid var(--color-border-glass);
+  backdrop-filter: blur(20px);
+  -webkit-backdrop-filter: blur(20px);
+}
+
+/* Respect reduced-motion preferences across all custom animations below. */
+@media (prefers-reduced-motion: reduce) {
+  *,
+  *::before,
+  *::after {
+    animation-duration: 0.01ms !important;
+    animation-iteration-count: 1 !important;
+    transition-duration: 0.01ms !important;
+  }
+}
+
+/* --- Orb signature animations -------------------------------------------- */
+
+@keyframes orb-drift {
+  0%,
+  100% {
+    transform: rotate(0deg) scale(1);
+  }
+  50% {
+    transform: rotate(180deg) scale(1.03);
+  }
+}
+
+@keyframes orb-swirl {
+  to {
+    transform: rotate(360deg);
+  }
+}
+
+@keyframes orb-pulse-ring {
+  0% {
+    transform: scale(0.9);
+    opacity: 0.5;
+  }
+  100% {
+    transform: scale(1.6);
+    opacity: 0;
+  }
+}
+
+@keyframes orb-contract {
+  0%,
+  100% {
+    transform: scale(1);
+  }
+  50% {
+    transform: scale(0.92);
+  }
+}
+
+@keyframes eq {
+  0%,
+  100% {
+    height: 30%;
+  }
+  50% {
+    height: 100%;
+  }
+}
+
+@keyframes fade-up {
+  from {
+    opacity: 0;
+    transform: translateY(12px);
+  }
+  to {
+    opacity: 1;
+    transform: translateY(0);
+  }
+}
+
+/* --- 3D Avatar & Futuristic Landing Animations -------------------------- */
+
+@keyframes float-3d {
+  0%, 100% {
+    transform: translateY(0px) rotate(0deg);
+  }
+  50% {
+    transform: translateY(-12px) rotate(1deg);
+  }
+}
+
+@keyframes pulse-ambient {
+  0%, 100% {
+    opacity: 0.55;
+    transform: scale(0.98);
+  }
+  50% {
+    opacity: 0.85;
+    transform: scale(1.04);
+  }
+}
+
+@keyframes spin-orbit {
+  0% {
+    transform: rotate(0deg);
+  }
+  100% {
+    transform: rotate(360deg);
+  }
+}
+
+@keyframes spin-orbit-reverse {
+  0% {
+    transform: rotate(360deg);
+  }
+  100% {
+    transform: rotate(0deg);
+  }
+}
+
+@keyframes shine-sweep {
+  0% {
+    transform: translateX(-120%) skewX(-20deg);
+  }
+  100% {
+    transform: translateX(220%) skewX(-20deg);
+  }
+}
+
+@keyframes wave-bounce {
+  0%, 100% {
+    height: 6px;
+    opacity: 0.4;
+  }
+  50% {
+    height: 32px;
+    opacity: 1;
+  }
+}
+
+@keyframes blob-drift-1 {
+  0%, 100% {
+    transform: translate(0, 0) scale(1);
+  }
+  33% {
+    transform: translate(30px, -40px) scale(1.08);
+  }
+  66% {
+    transform: translate(-25px, 20px) scale(0.95);
+  }
+}
+
+@keyframes blob-drift-2 {
+  0%, 100% {
+    transform: translate(0, 0) scale(1);
+  }
+  33% {
+    transform: translate(-40px, 35px) scale(1.05);
+  }
+  66% {
+    transform: translate(35px, -20px) scale(0.92);
+  }
+}
+
+/* Glassmorphism & UI Utilities */
+
+.glass-panel {
+  background: rgba(14, 14, 28, 0.65);
+  backdrop-filter: blur(16px);
+  -webkit-backdrop-filter: blur(16px);
+  border: 1px solid rgba(255, 255, 255, 0.08);
+}
+
+.glass-panel-interactive {
+  background: rgba(14, 14, 28, 0.6);
+  backdrop-filter: blur(16px);
+  -webkit-backdrop-filter: blur(16px);
+  border: 1px solid rgba(255, 255, 255, 0.08);
+  transition: all 0.35s cubic-bezier(0.16, 1, 0.3, 1);
+}
+
+.glass-panel-interactive:hover {
+  background: rgba(22, 22, 42, 0.75);
+  border-color: rgba(34, 211, 238, 0.3);
+  box-shadow: 0 16px 36px -12px rgba(139, 92, 246, 0.25), 0 0 20px -4px rgba(34, 211, 238, 0.15);
+  transform: translateY(-4px);
+}
+
+.text-gradient-silver {
+  background: linear-gradient(180deg, #FFFFFF 0%, #E2E8F0 60%, #94A3B8 100%);
+  -webkit-background-clip: text;
+  -webkit-text-fill-color: transparent;
+}
+
+.text-gradient-electric {
+  background: linear-gradient(135deg, #FFFFFF 0%, #C4B5FD 35%, #22D3EE 75%, #38BDF8 100%);
+  -webkit-background-clip: text;
+  -webkit-text-fill-color: transparent;
+}
+
+.text-gradient-cyan-purple {
+  background: linear-gradient(135deg, #22D3EE 0%, #818CF8 50%, #C084FC 100%);
+  -webkit-background-clip: text;
+  -webkit-text-fill-color: transparent;
+}
+
+.neon-glow-cyan {
+  box-shadow: 0 0 25px rgba(34, 211, 238, 0.25);
+}
+
+.neon-glow-purple {
+  box-shadow: 0 0 35px rgba(139, 92, 246, 0.3);
+}
+
+.bg-radial-grid {
+  background-size: 40px 40px;
+  background-image: 
+    linear-gradient(to right, rgba(255, 255, 255, 0.03) 1px, transparent 1px),
+    linear-gradient(to bottom, rgba(255, 255, 255, 0.03) 1px, transparent 1px);
+}

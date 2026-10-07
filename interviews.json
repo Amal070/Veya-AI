@@ -1,0 +1,28 @@
+{
+    "bbdc1daf-29a8-4cf5-89f1-c347a1c0e31e": {
+        "history": [
+            {
+                "question": "Could you elaborate on the AI component of your skill barter platform? What specific AI techniques or algorithms did you implement?",
+                "answer": "After this is working, the next step should be creating a LangGraph workflow instead of adding more APIs. That's where Veya becomes a real Agentic AI project.",
+                "score": 1,
+                "feedback": "The candidate's answer discusses future plans for incorporating AI (LangGraph, Agentic AI) rather than elaborating on currently implemented AI components, techniques, or algorithms as requested by the question. It does not provide any specific details about the AI techniques or algorithms, even in the context of future development."
+            },
+            {
+                "question": "Beyond the AI aspects, what were some of the significant technical challenges you encountered while developing your skill barter platform, and how did you address them?"
+            }
+        ]
+    },
+    "c40e9e7d-2bfc-44b1-a31d-6c0027effef7": {
+        "history": [
+            {
+                "question": "Can you tell me more about the \"AI-powered\" aspect of your skill barter platform? What specific AI techniques or algorithms did you use, and how did they enhance the platform's functionality?",
+                "answer": "I built an Agentic AI Interview Assistant using LangGraph, RAG, and Gemini.",
+                "score": 1,
+                "feedback": "The candidate's answer discusses building an 'Agentic AI Interview Assistant,' which appears to be a different project or tool than the 'skill barter platform' mentioned in the question. There's a significant disconnect in relevance. While specific AI techniques (LangGraph, RAG, Gemini) are mentioned, the candidate does not explain how these techniques enhanced the functionality of *either* the interview assistant *or* the skill barter platform. The answer fails to address the core of the question regarding the AI-powered aspects of the skill barter platform and their impact on its functionality."
+            },
+            {
+                "question": "Beyond the AI components, what were some of the key architectural or design decisions you made for your skill barter platform, and what technical challenges did you face during its implementation?"
+            }
+        ]
+    }
+}

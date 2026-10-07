@@ -1,0 +1,38 @@
+# Python-generated files
+__pycache__/
+*.py[oc]
+build/
+dist/
+wheels/
+*.egg-info
+
+# Virtual environments
+.venv
+
+# Environment and secrets
+.env
+.env.local
+
+# Runtime data
+audio/
+uploads/
+chroma_db/
+checkpoints.sqlite
+*.sqlite
+
+# Node
+frontend/node_modules/
+frontend/dist/
+
+# OS / IDE
+.DS_Store
+.idea/
+.vscode/
+
+# Temp transcription files
+temp_*
+
+# Tests
+test/
+tests/
+.pytest_cache/
