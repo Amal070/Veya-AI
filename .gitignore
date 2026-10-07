@@ -35,4 +35,6 @@ temp_*
 # Tests
 test/
 tests/
+test_*.py
+test_graph.py
 .pytest_cache/
