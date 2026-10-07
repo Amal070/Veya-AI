@@ -40,45 +40,6 @@
 
 ---
 
-## 📸 Screenshots
-
-<div align="center">
-  <table>
-    <tr>
-      <td width="50%">
-        <h4 align="center">Landing Page & Voice Orb</h4>
-        <img src="https://github.com/user-attachments/assets/d1fcd0ed-bff4-4e0c-b593-83d1f512d571" alt="Landing Page" width="100%"/>
-      </td>
-      <td width="50%">
-        <h4 align="center">Interview Experience & Features</h4>
-        <img src="https://github.com/user-attachments/assets/4e75e47f-4ba8-4a7f-9a00-ea69be172015" alt="Features Section" width="100%"/>
-      </td>
-    </tr>
-    <tr>
-      <td width="50%">
-        <h4 align="center">Resume Upload & Role Setup</h4>
-        <img src="https://github.com/user-attachments/assets/9eb5f926-96e3-43ff-9a98-3c5b64236108" alt="Setup Modal" width="100%"/>
-      </td>
-      <td width="50%">
-        <h4 align="center">Live Voice Interview Session</h4>
-        <img src="https://github.com/user-attachments/assets/a66b5c93-80a6-4f76-b4d5-c9141072d8fa" alt="Live Interview Session" width="100%"/>
-      </td>
-    </tr>
-    <tr>
-      <td width="50%">
-        <h4 align="center">Interactive Voice Controls & Transcript</h4>
-        <img src="https://github.com/user-attachments/assets/2262335a-450e-4690-b7bb-d742db644f28" alt="Interview Conversation" width="100%"/>
-      </td>
-      <td width="50%">
-        <h4 align="center">Detailed Performance Report</h4>
-        <img src="https://github.com/user-attachments/assets/e920773b-1358-44bc-a4f0-a049284633c6" alt="Final Performance Report" width="100%"/>
-      </td>
-    </tr>
-  </table>
-</div>
-
----
-
 ## 🏗️ Architecture
 
 ### Interview State Machine
