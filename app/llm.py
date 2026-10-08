@@ -37,7 +37,12 @@ class LLMUnavailableError(Exception):
     """Raised when the LLM cannot produce a usable response after retries."""
 
 
-async def safe_ainvoke(prompt: str, *, max_retries: int | None = None) -> str:
+async def safe_ainvoke(
+    prompt: str,
+    *,
+    max_retries: int | None = None,
+    max_tokens: int | None = None,
+) -> str:
     """
     Invoke the LLM with a timeout and bounded retries.
     Returns the cleaned text content. Raises LLMUnavailableError if every
@@ -46,11 +51,12 @@ async def safe_ainvoke(prompt: str, *, max_retries: int | None = None) -> str:
     """
     retries = settings.llm_max_retries if max_retries is None else max_retries
     last_error: Exception | None = None
+    client = llm.bind(max_tokens=max_tokens) if max_tokens else llm
 
     for attempt in range(retries + 1):
         try:
             response = await asyncio.wait_for(
-                llm.ainvoke(prompt), timeout=settings.llm_timeout_seconds
+                client.ainvoke(prompt), timeout=settings.llm_timeout_seconds
             )
             content = (response.content or "").strip()
             if not content:

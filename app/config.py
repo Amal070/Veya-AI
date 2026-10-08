@@ -1,5 +1,6 @@
 from functools import lru_cache
 
+from pydantic import AliasChoices, Field
 from pydantic_settings import BaseSettings, SettingsConfigDict
 
 
@@ -11,8 +12,14 @@ class Settings(BaseSettings):
     )
 
     # LLM
-    groq_api_key: str = ""
-    llm_model: str = "qwen/qwen3-32b"
+    groq_api_key: str = Field(
+        default="",
+        validation_alias=AliasChoices("VEYA_GROQ_API_KEY", "GROQ_API_KEY"),
+    )
+    llm_model: str = Field(
+        default="qwen/qwen3.8-27b",
+        validation_alias=AliasChoices("VEYA_LLM_MODEL", "LLM_MODEL"),
+    )
     llm_timeout_seconds: float = 20.0
     llm_max_retries: int = 2
 

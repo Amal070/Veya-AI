@@ -62,27 +62,10 @@ function normalizeQuestion(text) {
 }
 
 function getNonRepeatingQuestion(candidateQuestion, currentQ, transcriptHistory, diff = "medium") {
-  const askedNorm = new Set();
-  if (currentQ) {
-    askedNorm.add(normalizeQuestion(currentQ));
+  if (candidateQuestion && candidateQuestion.trim().length > 0) {
+    return candidateQuestion.trim();
   }
-  if (Array.isArray(transcriptHistory)) {
-    transcriptHistory.forEach((t) => {
-      if (t.role === "assistant" && t.text && t.text.includes("?")) {
-        askedNorm.add(normalizeQuestion(t.text));
-      }
-    });
-  }
-
-  // If candidateQuestion is valid and has NOT been asked, return it
-  if (candidateQuestion && !askedNorm.has(normalizeQuestion(candidateQuestion))) {
-    return candidateQuestion;
-  }
-
-  // Otherwise, select an unasked question from the difficulty pool
-  const pool = CLIENT_FALLBACK_QUESTIONS[diff] || CLIENT_FALLBACK_QUESTIONS.medium;
-  const fresh = pool.find((q) => !askedNorm.has(normalizeQuestion(q)));
-  return fresh || candidateQuestion;
+  return currentQ || "Can you explain the architecture and key technical decisions behind your projects?";
 }
 
 export function useVeya() {
@@ -239,10 +222,12 @@ export function useVeya() {
   // --- Resume upload -----------------------------------------------------------
 
   const uploadResume = useCallback(
-    async (file) => {
+    async (file, explicitSessionId = null) => {
       setError(null);
-      const data = await apiUploadResume(file, resumeSessionId || sessionId);
+      const targetSessionId = explicitSessionId || resumeSessionId || sessionId || crypto.randomUUID();
+      const data = await apiUploadResume(file, targetSessionId);
       setSessionId(data.session_id);
+      setResumeSessionId(data.session_id);
       setShowResumeModal(false);
       setShowSetupModal(true);
       return data;
@@ -253,7 +238,7 @@ export function useVeya() {
   // --- Interview setup + lifecycle ----------------------------------------------
 
   const beginInterview = useCallback(
-    async ({ questionLimit: qLimit, difficulty: diff }) => {
+    async ({ questionLimit: qLimit, difficulty: diff, sessionId: explicitSessionId = null }) => {
       setError(null);
       setShowSetupModal(false);
       setQuestionLimit(qLimit);
@@ -264,8 +249,11 @@ export function useVeya() {
       setReport(null);
       setLastFeedback(null);
 
+      const targetSessionId = explicitSessionId || sessionId || crypto.randomUUID();
+      setSessionId(targetSessionId);
+
       try {
-        const data = await apiStartInterview(sessionId, qLimit, diff);
+        const data = await apiStartInterview(targetSessionId, qLimit, diff);
         setQuestionNumber(data.question_number || 1);
         setCurrentQuestion(data.question);
         pushLine("assistant", data.question);
@@ -398,9 +386,11 @@ export function useVeya() {
     setLastFeedback(null);
     setMode("assistant");
     setState("idle");
-    setResumeSessionId(sessionId || crypto.randomUUID());
+    const freshSessionId = crypto.randomUUID();
+    setSessionId(freshSessionId);
+    setResumeSessionId(freshSessionId);
     setShowResumeModal(true);
-  }, [sessionId]);
+  }, []);
 
   const loadReportForSession = useCallback(async (id) => {
     const data = await fetchInterviewReport(id);

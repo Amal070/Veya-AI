@@ -68,8 +68,9 @@ export default function Interview() {
     const file = e.target.files?.[0];
     if (!file) return;
 
-    if (!file.name.toLowerCase().endsWith(".pdf")) {
-      setUploadError("Please upload a PDF resume.");
+    const ext = file.name.split(".").pop()?.toLowerCase();
+    if (!["pdf", "docx", "txt"].includes(ext)) {
+      setUploadError("Please upload a PDF, DOCX, or TXT resume.");
       return;
     }
     if (file.size > 5 * 1024 * 1024) {
@@ -86,14 +87,19 @@ export default function Interview() {
     setUploadError(null);
 
     try {
+      let activeSessionId = crypto.randomUUID();
       if (resumeFile) {
-        // Upload resume first to personalize questions
-        await mm.uploadResume(resumeFile);
+        // Upload resume first and capture the exact session_id
+        const uploadResult = await mm.uploadResume(resumeFile, activeSessionId);
+        if (uploadResult?.session_id) {
+          activeSessionId = uploadResult.session_id;
+        }
       }
-      // Begin the interview session
+      // Begin the interview session using the exact session_id
       await mm.beginInterview({
         questionLimit: selectedLimit,
         difficulty: selectedDifficulty,
+        sessionId: activeSessionId,
       });
     } catch (err) {
       console.error("Failed to start studio interview:", err);
@@ -280,13 +286,13 @@ export default function Interview() {
                     <FileText size={14} className="text-emerald-400" />
                     3. Resume for Tailored Questions (Optional)
                   </span>
-                  <span className="text-[10px] text-white/40 font-normal">PDF only • Max 5MB</span>
+                  <span className="text-[10px] text-white/40 font-normal">PDF, DOCX, TXT • Max 5MB</span>
                 </label>
 
                 <input
                   type="file"
                   ref={fileInputRef}
-                  accept=".pdf"
+                  accept=".pdf,.docx,.txt"
                   onChange={handleFileChange}
                   className="hidden"
                 />
@@ -298,7 +304,7 @@ export default function Interview() {
                   >
                     <Upload size={20} className="text-cyan-400 mb-2" />
                     <span className="text-xs font-medium text-white/80">
-                      Click to upload resume (.pdf)
+                      Click to upload resume (.pdf, .docx, .txt)
                     </span>
                     <span className="text-[11px] text-white/40 mt-0.5">
                       Veya will extract your skills & projects to formulate realistic questions.

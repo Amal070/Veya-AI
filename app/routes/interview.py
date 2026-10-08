@@ -24,7 +24,7 @@ from app.config import settings
 from app.graph.graph_runtime import get_compiled_graph
 from app.limiter import limiter
 from app.agents.report_agent import generate_report
-from app.agents.interviewer_agent import generate_question, _normalize
+from app.agents.interviewer_agent import generate_question, _normalize, _is_semantically_duplicate
 from app.services.resume_cache import resume_context_cache
 from app.tools.speech_to_text import transcribe
 from app.tools.text_to_speech import TTSError, generate_audio
@@ -168,6 +168,9 @@ async def start_interview(req: StartInterviewRequest, request: Request):
     and return the first question, with spoken audio."""
     graph = get_compiled_graph(request.app)
 
+    logger.info("[INTERVIEW] Interview ID: %s", req.session_id)
+    logger.info("[INTERVIEW] Resume ID: %s", req.session_id)
+
     try:
         result = await graph.ainvoke(
             _create_initial_state(req.session_id, req.question_limit, req.difficulty),
@@ -262,8 +265,8 @@ async def _advance_interview(graph, session_id: str, answer_text: str) -> dict:
 
     if interrupt_data:
         next_question = _require_interrupt_question(interrupt_data, "answer")
-        asked_norm = {_normalize(h.get("question", "")) for h in history if "question" in h}
-        if _normalize(next_question) in asked_norm:
+        asked_questions = [h.get("question", "") for h in history if "question" in h]
+        if _is_semantically_duplicate(next_question, asked_questions):
             logger.warning(
                 "Duplicate next_question detected in _advance_interview ('%s'). Generating fresh question.",
                 next_question,

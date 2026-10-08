@@ -18,8 +18,9 @@ export default function ResumeUploadModal({ open, onClose, onUploaded, uploadRes
     const selected = files?.[0];
     if (!selected) return;
 
-    if (!selected.name.toLowerCase().endsWith(".pdf")) {
-      setError("Only PDF resumes are supported.");
+    const ext = selected.name.split(".").pop()?.toLowerCase();
+    if (!["pdf", "docx", "txt"].includes(ext)) {
+      setError("Supported resume formats: PDF, DOCX, TXT.");
       return;
     }
     if (selected.size > 5 * 1024 * 1024) {
@@ -121,7 +122,7 @@ export default function ResumeUploadModal({ open, onClose, onUploaded, uploadRes
                 Drop your resume here, or click to browse
               </p>
               <p className="text-xs" style={{ color: "var(--color-text-low)" }}>
-                PDF only, up to 5MB
+                PDF, DOCX, TXT up to 5MB
               </p>
             </>
           )}
@@ -129,7 +130,7 @@ export default function ResumeUploadModal({ open, onClose, onUploaded, uploadRes
           <input
             ref={inputRef}
             type="file"
-            accept=".pdf,application/pdf"
+            accept=".pdf,.docx,.txt,application/pdf,application/vnd.openxmlformats-officedocument.wordprocessingml.document,text/plain"
             className="hidden"
             onChange={(e) => handleFiles(e.target.files)}
           />
