@@ -49,6 +49,7 @@ from langgraph.types import Command
 
 from app.agents.assistant_agent import assistant_reply_stream
 from app.config import settings
+from app.difficulty import normalize_difficulty
 from app.services.session_store import session_store
 from app.services.vad import UtteranceSegmenter, VADEvent
 from app.tools.speech_to_text import transcribe_pcm
@@ -462,22 +463,26 @@ class VoiceConnection:
         self.interview_graph = None  # interview is over; fall back to assistant mode
         return "That's the end of the interview. Great work — check your report for the full breakdown."
 
-    async def start_interview(self, session_id: str, question_limit: int, difficulty: str) -> str:
+    async def start_interview(
+        self, session_id: str, question_limit: int, difficulty: str, job_role: str = ""
+    ) -> str:
         """Initialize a LangGraph interview thread and return the first question."""
         from app.graph.graph_runtime import get_compiled_graph
 
         self.interview_graph = get_compiled_graph(self.ws.app)
         self.interview_session_id = session_id
         config = {"configurable": {"thread_id": session_id}}
+        norm_diff = normalize_difficulty(difficulty)
         initial_state = {
             "session_id": session_id,
             "current_question": "",
             "current_answer": "",
             "score": 0,
             "feedback": "",
-            "difficulty": difficulty,
+            "difficulty": norm_diff,
             "question_count": 0,
             "question_limit": question_limit,
+            "job_role": job_role,
             "history": [],
             "report": {},
             "finished": False,
@@ -565,13 +570,18 @@ async def voice_ws(ws: WebSocket) -> None:
 
                 if msg_type == "start_interview":
                     session_id = payload.get("session_id") or conn.session.session_id
-                    question_limit = int(payload.get("question_limit", settings.default_question_count))
+                    raw_limit = payload.get("question_limit") or payload.get("question_count") or settings.default_question_count
+                    try:
+                        question_limit = int(raw_limit)
+                    except (ValueError, TypeError):
+                        question_limit = settings.default_question_count
                     question_limit = max(
                         settings.min_question_count, min(settings.max_question_count, question_limit)
                     )
-                    difficulty = payload.get("difficulty", "medium")
+                    difficulty = normalize_difficulty(payload.get("difficulty", "medium"))
+                    job_role = str(payload.get("job_role", "")).strip()
                     try:
-                        question = await conn.start_interview(session_id, question_limit, difficulty)
+                        question = await conn.start_interview(session_id, question_limit, difficulty, job_role)
                     except Exception as e:
                         logger.exception("Failed to start interview: %s", e)
                         await conn.send_error("interview_start_failed", "Couldn't start the interview. Please try again.")

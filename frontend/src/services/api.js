@@ -54,12 +54,19 @@ export async function uploadResume(file, sessionId = crypto.randomUUID()) {
 
 // --- Interview ---------------------------------------------------------------
 
-export async function startInterview(sessionId, questionLimit, difficulty) {
+export async function startInterview(sessionId, questionLimit, difficulty, jobRole = "") {
   const response = await api.post("/interview/start", {
     session_id: sessionId,
     question_limit: questionLimit,
+    question_count: questionLimit,
     difficulty,
+    job_role: jobRole,
   });
+  return response.data;
+}
+
+export async function fetchInterviewSession(sessionId) {
+  const response = await api.get(`/interview/session/${sessionId}`);
   return response.data;
 }
 

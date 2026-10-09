@@ -31,12 +31,12 @@ import BackgroundFX from "../components/landing/BackgroundFX";
 import { useVeya } from "../hooks/useVeya";
 
 const DIFFICULTIES = [
-  { value: "easy", label: "Easy", desc: "Core fundamentals & concepts" },
-  { value: "medium", label: "Medium", desc: "Algorithms & system architecture" },
-  { value: "hard", label: "Hard", desc: "Distributed scale & complex tradeoffs" },
+  { value: "easy", label: "Easy", desc: "Core fundamentals & basic concepts" },
+  { value: "medium", label: "Medium", desc: "Practical implementation & trade-offs" },
+  { value: "hard", label: "Hard", desc: "Architecture, scalability & security" },
 ];
 
-const QUESTION_LIMITS = [3, 5, 8];
+const QUESTION_PRESETS = [5, 10, 15];
 
 /**
  * Interview — The dedicated, futuristic Veya AI Mock Interview Studio.
@@ -48,8 +48,10 @@ export default function Interview() {
   const navigate = useNavigate();
 
   // Pre-interview studio configuration state
-  const [selectedDifficulty, setSelectedDifficulty] = useState("medium");
-  const [selectedLimit, setSelectedLimit] = useState(5);
+  const [selectedDifficulty, setSelectedDifficulty] = useState(mm.difficulty || "medium");
+  const [selectedPreset, setSelectedPreset] = useState(mm.questionLimit || 5);
+  const [customCount, setCustomCount] = useState("");
+  const [targetJobRole, setTargetJobRole] = useState("");
   const [resumeFile, setResumeFile] = useState(null);
   const [isStarting, setIsStarting] = useState(false);
   const [uploadError, setUploadError] = useState(null);
@@ -86,6 +88,9 @@ export default function Interview() {
     setIsStarting(true);
     setUploadError(null);
 
+    const rawCount = selectedPreset === "custom" ? (Number(customCount) || 5) : selectedPreset;
+    const finalLimit = Math.max(1, Math.min(15, rawCount));
+
     try {
       let activeSessionId = crypto.randomUUID();
       if (resumeFile) {
@@ -97,9 +102,10 @@ export default function Interview() {
       }
       // Begin the interview session using the exact session_id
       await mm.beginInterview({
-        questionLimit: selectedLimit,
+        questionLimit: finalLimit,
         difficulty: selectedDifficulty,
         sessionId: activeSessionId,
+        jobRole: targetJobRole,
       });
     } catch (err) {
       console.error("Failed to start studio interview:", err);
@@ -258,15 +264,15 @@ export default function Interview() {
                   <Layers size={14} className="text-purple-400" />
                   2. Number of Questions
                 </label>
-                <div className="flex gap-3">
-                  {QUESTION_LIMITS.map((count) => {
-                    const isSelected = selectedLimit === count;
+                <div className="grid grid-cols-2 sm:grid-cols-4 gap-2.5">
+                  {QUESTION_PRESETS.map((count) => {
+                    const isSelected = selectedPreset === count;
                     return (
                       <button
                         key={count}
                         type="button"
-                        onClick={() => setSelectedLimit(count)}
-                        className={`flex-1 rounded-xl py-2.5 text-center text-sm font-semibold transition-all duration-200 cursor-pointer ${
+                        onClick={() => setSelectedPreset(count)}
+                        className={`rounded-xl py-2.5 text-center text-sm font-semibold transition-all duration-200 cursor-pointer ${
                           isSelected
                             ? "bg-gradient-to-r from-purple-600/40 to-cyan-500/40 border border-cyan-400/60 text-white shadow-[0_0_15px_rgba(34,211,238,0.2)]"
                             : "bg-white/[0.03] border border-white/10 text-white/70 hover:border-white/20 hover:text-white"
@@ -276,7 +282,47 @@ export default function Interview() {
                       </button>
                     );
                   })}
+                  <button
+                    type="button"
+                    onClick={() => setSelectedPreset("custom")}
+                    className={`rounded-xl py-2.5 text-center text-sm font-semibold transition-all duration-200 cursor-pointer ${
+                      selectedPreset === "custom"
+                        ? "bg-gradient-to-r from-purple-600/40 to-cyan-500/40 border border-cyan-400/60 text-white shadow-[0_0_15px_rgba(34,211,238,0.2)]"
+                        : "bg-white/[0.03] border border-white/10 text-white/70 hover:border-white/20 hover:text-white"
+                    }`}
+                  >
+                    Custom
+                  </button>
                 </div>
+
+                {selectedPreset === "custom" && (
+                  <div className="mt-3">
+                    <input
+                      type="number"
+                      min={1}
+                      max={15}
+                      value={customCount}
+                      onChange={(e) => setCustomCount(e.target.value)}
+                      placeholder="Enter custom count (1–15 questions)"
+                      className="w-full rounded-xl px-4 py-2.5 text-sm outline-none bg-white/[0.04] border border-cyan-400/50 text-white placeholder:text-white/40 focus:border-cyan-400 shadow-[0_0_12px_rgba(34,211,238,0.15)]"
+                    />
+                  </div>
+                )}
+              </div>
+
+              {/* Optional Job Role */}
+              <div className="mt-6 pt-6 border-t border-white/10">
+                <label className="flex items-center gap-2 text-xs font-semibold uppercase tracking-wider text-white/70 mb-2">
+                  <Sparkles size={14} className="text-cyan-400" />
+                  Target Job Role (Optional)
+                </label>
+                <input
+                  type="text"
+                  value={targetJobRole}
+                  onChange={(e) => setTargetJobRole(e.target.value)}
+                  placeholder="e.g. Full Stack Developer, Python Backend Engineer"
+                  className="w-full rounded-xl px-4 py-2.5 text-sm outline-none bg-white/[0.03] border border-white/10 text-white placeholder:text-white/35 focus:border-cyan-400/60 transition-colors"
+                />
               </div>
 
               {/* Parameter 3: Optional Resume Upload */}

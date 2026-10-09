@@ -20,3 +20,4 @@ class InterviewState(TypedDict):
     history: list[QAEntry]
     report: dict
     finished: bool
+    job_role: str

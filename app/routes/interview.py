@@ -14,13 +14,15 @@ Flow per the product spec:
 """
 import logging
 import os
+from typing import Any
 from uuid import uuid4
 
 from fastapi import APIRouter, File, HTTPException, Request, UploadFile, status
 from langgraph.types import Command
-from pydantic import BaseModel, field_validator
+from pydantic import BaseModel, field_validator, model_validator
 
 from app.config import settings
+from app.difficulty import normalize_difficulty, is_valid_difficulty
 from app.graph.graph_runtime import get_compiled_graph
 from app.limiter import limiter
 from app.agents.report_agent import generate_report
@@ -41,7 +43,12 @@ def _build_config(thread_id: str) -> dict:
     return {"configurable": {"thread_id": thread_id}}
 
 
-def _create_initial_state(session_id: str, question_limit: int, difficulty: str):
+def _create_initial_state(
+    session_id: str,
+    question_limit: int,
+    difficulty: str,
+    job_role: str = "",
+):
     return {
         "session_id": session_id,
         "current_question": "",
@@ -51,6 +58,7 @@ def _create_initial_state(session_id: str, question_limit: int, difficulty: str)
         "difficulty": difficulty,
         "question_count": 0,
         "question_limit": question_limit,
+        "job_role": job_role,
         "history": [],
         "report": {},
         "finished": False,
@@ -98,28 +106,42 @@ _RETRY_MESSAGES = {
 # ---------------------------------------------------------------------------
 
 class StartInterviewRequest(BaseModel):
-    session_id: str
-    question_limit: int = settings.default_question_count
+    session_id: str | None = None
+    resume_id: str | None = None
+    question_limit: int | None = None
+    question_count: int | None = None
     difficulty: str = "medium"
+    job_role: str | None = None
 
-    @field_validator("session_id")
+    @model_validator(mode="before")
     @classmethod
-    def session_id_not_empty(cls, v: str) -> str:
-        if not v or not v.strip():
-            raise ValueError("session_id must not be empty")
-        return v.strip()
+    def resolve_fields(cls, data: Any) -> Any:
+        if isinstance(data, dict):
+            sid = data.get("session_id") or data.get("resume_id")
+            if not sid or not str(sid).strip():
+                raise ValueError("session_id (or resume_id) must not be empty")
+            data["session_id"] = str(sid).strip()
 
-    @field_validator("difficulty")
-    @classmethod
-    def valid_difficulty(cls, v: str) -> str:
-        if v not in ("easy", "medium", "hard"):
-            raise ValueError("difficulty must be one of: easy, medium, hard")
-        return v
+            raw_limit = data.get("question_limit")
+            if raw_limit is None:
+                raw_limit = data.get("question_count")
+            if raw_limit is None:
+                q_limit = settings.default_question_count
+            else:
+                try:
+                    q_limit = int(raw_limit)
+                except (ValueError, TypeError):
+                    q_limit = settings.default_question_count
+            data["question_limit"] = max(
+                settings.min_question_count, min(settings.max_question_count, q_limit)
+            )
 
-    @field_validator("question_limit")
-    @classmethod
-    def clamp_question_limit(cls, v: int) -> int:
-        return max(settings.min_question_count, min(settings.max_question_count, v))
+            raw_diff = data.get("difficulty")
+            data["difficulty"] = normalize_difficulty(raw_diff, default="medium")
+
+            jr = data.get("job_role")
+            data["job_role"] = str(jr).strip() if jr else ""
+        return data
 
 
 class AnswerRequest(BaseModel):
@@ -170,10 +192,16 @@ async def start_interview(req: StartInterviewRequest, request: Request):
 
     logger.info("[INTERVIEW] Interview ID: %s", req.session_id)
     logger.info("[INTERVIEW] Resume ID: %s", req.session_id)
+    logger.info("[INTERVIEW] Difficulty: %s, Limit: %d, Role: %s", req.difficulty, req.question_limit, req.job_role or "N/A")
 
     try:
         result = await graph.ainvoke(
-            _create_initial_state(req.session_id, req.question_limit, req.difficulty),
+            _create_initial_state(
+                req.session_id,
+                req.question_limit,
+                req.difficulty,
+                job_role=req.job_role or "",
+            ),
             config=_build_config(req.session_id),
         )
     except Exception as e:
@@ -192,6 +220,8 @@ async def start_interview(req: StartInterviewRequest, request: Request):
         "audio_url": audio_url,
         "question_number": 1,
         "question_limit": req.question_limit,
+        "difficulty": req.difficulty,
+        "job_role": req.job_role,
     }
 
 
@@ -275,12 +305,14 @@ async def _advance_interview(graph, session_id: str, answer_text: str) -> dict:
                 previous_qa=history,
                 difficulty=result.get("difficulty", "medium"),
                 session_id=session_id,
+                job_role=result.get("job_role", ""),
             )
         audio_url = await _safe_generate_audio(next_question)
         return {
             "finished": False,
             "score": latest.get("score", 0),
             "feedback": latest.get("feedback", ""),
+            "difficulty": result.get("difficulty", "medium"),
             "next_question": next_question,
             "audio_url": audio_url,
             "questions_answered": len(history),
@@ -300,6 +332,7 @@ async def _advance_interview(graph, session_id: str, answer_text: str) -> dict:
     return {
         "finished": True,
         "questions_answered": len(history),
+        "difficulty": result.get("difficulty", "medium"),
         "report": report,
         "audio_url": audio_url,
     }
@@ -348,14 +381,47 @@ async def end_interview_early(req: EndEarlyRequest, request: Request):
     return {
         "finished": True,
         "questions_answered": len(history),
+        "difficulty": state.values.get("difficulty", "medium"),
         "report": report,
         "audio_url": audio_url,
     }
 
 
 # ---------------------------------------------------------------------------
-# Report
+# Session state & Report
 # ---------------------------------------------------------------------------
+
+@router.get("/session/{session_id}")
+async def get_interview_session(session_id: str, request: Request):
+    """Retrieve the full interview state including difficulty and question limits."""
+    if not session_id or not session_id.strip():
+        raise HTTPException(status_code=status.HTTP_400_BAD_REQUEST, detail="session_id must not be empty.")
+
+    graph = get_compiled_graph(request.app)
+
+    try:
+        state = await graph.aget_state(_build_config(session_id))
+    except Exception as e:
+        logger.exception("Failed to retrieve session state for %s", session_id)
+        raise HTTPException(
+            status_code=status.HTTP_500_INTERNAL_SERVER_ERROR,
+            detail=f"Failed to retrieve session state: {e}",
+        )
+
+    if not state or not state.values:
+        raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail=f"Session '{session_id}' not found.")
+
+    return {
+        "session_id": session_id,
+        "finished": state.values.get("finished", False),
+        "difficulty": state.values.get("difficulty", "medium"),
+        "question_count": state.values.get("question_count", 0),
+        "question_limit": state.values.get("question_limit", settings.default_question_count),
+        "current_question": state.values.get("current_question", ""),
+        "job_role": state.values.get("job_role", ""),
+        "history": state.values.get("history", []),
+    }
+
 
 @router.get("/report/{session_id}")
 async def get_report(session_id: str, request: Request):

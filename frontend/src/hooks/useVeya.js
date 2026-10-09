@@ -11,49 +11,33 @@ import {
   skipInterviewQuestion as apiSkipInterviewQuestion,
   endInterviewEarly as apiEndInterviewEarly,
 } from "../services/api";
+import { loadSession, saveSession, clearSession } from "../services/session";
 
 /**
  * useVeya — single source of truth for the whole app's state machine.
- *
- * States (exactly these, nothing more):
- *   idle       — nothing happening, waiting for the user to act
- *   listening  — mic is recording the user's voice
- *   thinking   — waiting on a backend response (STT/LLM/TTS)
- *   speaking   — assistant's reply audio is playing
- *   interview  — an interview is in progress (sub-state of the flow; the
- *                listening/thinking/speaking states still apply *within*
- *                an interview turn, this flag just gates which UI shows)
- *   finished   — interview is complete, report is ready
- *   error      — something failed; message explains what
- *
- * Mode (separate from state): "assistant" | "interview" — decides which
- * backend endpoints get called.
  */
 
 const CLIENT_FALLBACK_QUESTIONS = {
   easy: [
-    "Can you tell me about a project you're proud of and what your role was?",
-    "How do you approach debugging when an application throws an unexpected error?",
-    "What is your process for collaborating with teammates during code reviews?",
-    "How do you prioritize your work when balancing multiple competing deadlines?",
-    "Describe a time you had to quickly learn and adopt a new tool or technology?",
-    "How do you ensure your code is maintainable and well-documented for others?",
+    "Can you explain the main purpose and features of your project?",
+    "What is the difference between a list and a tuple in Python?",
+    "What is a primary key in a database, and why is it important?",
+    "Can you tell me about a project on your resume you are most proud of?",
+    "What core technologies did you contribute to your most recent project?",
   ],
   medium: [
-    "Walk me through a technical challenge you faced recently and how you solved it.",
-    "How do you design RESTful or GraphQL APIs for high reliability and clean versioning?",
-    "Explain how you identify and resolve database query performance bottlenecks.",
-    "How do you prevent race conditions and manage state in asynchronous systems?",
-    "Describe your approach to designing resilient error handling and retry mechanisms.",
-    "What strategies do you use for containerization and automated CI/CD deployments?",
+    "How did you connect your backend services with your database in your project?",
+    "How would you optimize a slow SQL database query in your application?",
+    "How would you implement JWT authentication in a web application?",
+    "How would you debug an API endpoint that returns unexpected results?",
+    "Walk me through a technical challenge you faced recently and how you solved it?",
   ],
   hard: [
-    "Describe a difficult architectural trade-off you made and what constraints guided your decision.",
-    "How do you ensure data consistency across distributed microservices under network partitions?",
-    "Walk me through how you design a multi-tier caching layer to prevent cache stampedes.",
-    "How would you architect a zero-downtime schema migration strategy for high-throughput tables?",
-    "Explain how you structure observability, distributed tracing, and MTTR alerting at scale.",
-    "How do you mitigate cascading failures and rate-limit abusive traffic across clusters?",
+    "How would you redesign your system to handle millions of requests while maintaining data integrity?",
+    "What security risks could arise from your authentication design, and how would you mitigate them?",
+    "How would you investigate a database bottleneck under heavy concurrent traffic?",
+    "How would you prevent race conditions and duplicate processing in a high-traffic API?",
+    "Describe a difficult architectural trade-off you made and what constraints guided your decision?",
   ],
 };
 
@@ -65,23 +49,26 @@ function getNonRepeatingQuestion(candidateQuestion, currentQ, transcriptHistory,
   if (candidateQuestion && candidateQuestion.trim().length > 0) {
     return candidateQuestion.trim();
   }
-  return currentQ || "Can you explain the architecture and key technical decisions behind your projects?";
+  const pool = CLIENT_FALLBACK_QUESTIONS[diff] || CLIENT_FALLBACK_QUESTIONS.medium;
+  return pool[0] || currentQ || "Can you explain the architecture and key technical decisions behind your projects?";
 }
 
 export function useVeya() {
+  const saved = loadSession();
+
   const [state, setState] = useState("idle");
-  const [mode, setMode] = useState("assistant");
+  const [mode, setMode] = useState(saved.mode || "assistant");
   const [error, setError] = useState(null);
 
-  const [sessionId, setSessionId] = useState(null);
-  const [transcript, setTranscript] = useState([]); // [{ role, text, id }]
+  const [sessionId, setSessionId] = useState(saved.sessionId);
+  const [transcript, setTranscript] = useState(saved.transcript || []); // [{ role, text, id }]
 
   // Interview-specific
-  const [currentQuestion, setCurrentQuestion] = useState(null);
-  const [questionNumber, setQuestionNumber] = useState(0);
-  const [questionLimit, setQuestionLimit] = useState(5);
-  const [difficulty, setDifficulty] = useState("medium");
-  const [lastFeedback, setLastFeedback] = useState(null);
+  const [currentQuestion, setCurrentQuestion] = useState(saved.currentQuestion);
+  const [questionNumber, setQuestionNumber] = useState(saved.questionNumber || 0);
+  const [questionLimit, setQuestionLimit] = useState(saved.questionLimit || 5);
+  const [difficulty, setDifficulty] = useState(saved.difficulty || "medium");
+  const [lastFeedback, setLastFeedback] = useState(saved.lastFeedback || null);
   const [report, setReport] = useState(null);
   const [isSkipping, setIsSkipping] = useState(false);
   const [isQuitting, setIsQuitting] = useState(false);
@@ -161,25 +148,50 @@ export function useVeya() {
           return;
         }
 
-        pushLine("user", result.transcript || "(answer submitted)");
+        const userText = result.transcript || "(answer submitted)";
+        pushLine("user", userText);
         setLastFeedback({ score: result.score, feedback: result.feedback });
 
         if (result.finished) {
           setReport(result.report);
           pushLine("assistant", "That's the end of the interview. Great work!");
+          saveSession({
+            mode: "finished",
+            currentQuestion: null,
+            lastFeedback: { score: result.score, feedback: result.feedback },
+          });
           await playAudio(result.audio_url);
           setState("finished");
           setShowReportModal(true);
           return;
         }
 
+        const activeDiff = result.difficulty || difficulty;
+        if (result.difficulty) {
+          setDifficulty(result.difficulty);
+        }
+
         const rawNext = result.next_question;
-        const nextQ = getNonRepeatingQuestion(rawNext, currentQuestion, transcript, difficulty);
+        const nextQ = getNonRepeatingQuestion(rawNext, currentQuestion, transcript, activeDiff);
         const isOriginalAudio = nextQ === rawNext;
 
-        setQuestionNumber((n) => n + 1);
+        const nextNum = questionNumber + 1;
+        setQuestionNumber(nextNum);
         setCurrentQuestion(nextQ);
         pushLine("assistant", nextQ);
+
+        saveSession({
+          questionNumber: nextNum,
+          currentQuestion: nextQ,
+          difficulty: activeDiff,
+          lastFeedback: { score: result.score, feedback: result.feedback },
+          transcript: [
+            ...transcript,
+            { role: "user", text: userText, id: `user-${Date.now()}` },
+            { role: "assistant", text: nextQ, id: `assistant-${Date.now()}` },
+          ],
+        });
+
         if (isOriginalAudio && result.audio_url) {
           await playAudio(result.audio_url);
         }
@@ -212,7 +224,7 @@ export function useVeya() {
       setError("Something went wrong talking to Veya. Please try again.");
       setState("error");
     }
-  }, [recorder, mode, sessionId, pushLine, playAudio]);
+  }, [recorder, mode, sessionId, pushLine, playAudio, currentQuestion, questionNumber, difficulty, transcript]);
 
   const requestInterview = useCallback(() => {
     setResumeSessionId(sessionId || crypto.randomUUID());
@@ -238,11 +250,13 @@ export function useVeya() {
   // --- Interview setup + lifecycle ----------------------------------------------
 
   const beginInterview = useCallback(
-    async ({ questionLimit: qLimit, difficulty: diff, sessionId: explicitSessionId = null }) => {
+    async ({ questionLimit: qLimit, difficulty: diff, sessionId: explicitSessionId = null, jobRole = "" }) => {
       setError(null);
       setShowSetupModal(false);
-      setQuestionLimit(qLimit);
-      setDifficulty(diff);
+      const resolvedLimit = Number(qLimit) || 5;
+      const resolvedDiff = diff || "medium";
+      setQuestionLimit(resolvedLimit);
+      setDifficulty(resolvedDiff);
       setMode("interview");
       setState("thinking");
       setTranscript([]);
@@ -253,10 +267,28 @@ export function useVeya() {
       setSessionId(targetSessionId);
 
       try {
-        const data = await apiStartInterview(targetSessionId, qLimit, diff);
-        setQuestionNumber(data.question_number || 1);
-        setCurrentQuestion(data.question);
-        pushLine("assistant", data.question);
+        const data = await apiStartInterview(targetSessionId, resolvedLimit, resolvedDiff, jobRole);
+        const activeDiff = data.difficulty || resolvedDiff;
+        const qNum = data.question_number || 1;
+        const firstQ = data.question;
+
+        setDifficulty(activeDiff);
+        setQuestionNumber(qNum);
+        setCurrentQuestion(firstQ);
+        pushLine("assistant", firstQ);
+
+        saveSession({
+          sessionId: targetSessionId,
+          difficulty: activeDiff,
+          questionLimit: resolvedLimit,
+          questionNumber: qNum,
+          currentQuestion: firstQ,
+          mode: "interview",
+          jobRole,
+          transcript: [{ role: "assistant", text: firstQ, id: `assistant-${Date.now()}-0` }],
+          lastFeedback: null,
+        });
+
         await playAudio(data.audio_url);
         setState("idle");
       } catch (err) {
@@ -269,6 +301,7 @@ export function useVeya() {
   );
 
   const endInterview = useCallback(() => {
+    clearSession();
     setMode("assistant");
     setState("idle");
     setCurrentQuestion(null);
@@ -304,6 +337,11 @@ export function useVeya() {
       if (result.finished) {
         setReport(result.report);
         pushLine("assistant", "That concludes the interview session. Here is your evaluation report.");
+        saveSession({
+          mode: "finished",
+          currentQuestion: null,
+          lastFeedback: { score: result.score ?? 0, feedback: result.feedback || "Question skipped." },
+        });
         if (result.audio_url) {
           await playAudio(result.audio_url);
         }
@@ -314,15 +352,32 @@ export function useVeya() {
         return;
       }
 
+      const activeDiff = result.difficulty || difficulty;
+      if (result.difficulty) setDifficulty(result.difficulty);
+
       const rawNext = result.next_question;
-      const nextQ = getNonRepeatingQuestion(rawNext, currentQuestion, transcript, difficulty);
+      const nextQ = getNonRepeatingQuestion(rawNext, currentQuestion, transcript, activeDiff);
       const isOriginalAudio = nextQ === rawNext;
 
-      setQuestionNumber((n) => n + 1);
+      const nextNum = questionNumber + 1;
+      setQuestionNumber(nextNum);
       setCurrentQuestion(nextQ);
       pushLine("assistant", nextQ);
       setShowSkipModal(false);
       setIsSkipping(false);
+
+      saveSession({
+        questionNumber: nextNum,
+        currentQuestion: nextQ,
+        difficulty: activeDiff,
+        lastFeedback: { score: result.score ?? 0, feedback: result.feedback || "Question skipped." },
+        transcript: [
+          ...transcript,
+          { role: "user", text: "(Question skipped)", id: `user-${Date.now()}` },
+          { role: "assistant", text: nextQ, id: `assistant-${Date.now()}` },
+        ],
+      });
+
       if (isOriginalAudio && result.audio_url) {
         await playAudio(result.audio_url);
       }
@@ -333,7 +388,7 @@ export function useVeya() {
       setIsSkipping(false);
       setState("idle");
     }
-  }, [mode, sessionId, isSkipping, recorder, pushLine, playAudio, currentQuestion, transcript, difficulty]);
+  }, [mode, sessionId, isSkipping, recorder, pushLine, playAudio, currentQuestion, questionNumber, transcript, difficulty]);
 
   const quitInterview = useCallback(
     async ({ generateReport = false } = {}) => {
@@ -355,6 +410,7 @@ export function useVeya() {
           if (result.report && Object.keys(result.report).length > 0) {
             setReport(result.report);
             pushLine("assistant", "Interview concluded early. Here is your evaluation summary.");
+            saveSession({ mode: "finished", currentQuestion: null });
             setState("finished");
             setShowReportModal(true);
             return;
@@ -366,6 +422,7 @@ export function useVeya() {
       }
 
       // Discard session and return to idle
+      clearSession();
       setShowQuitModal(false);
       setMode("assistant");
       setState("idle");
@@ -378,6 +435,7 @@ export function useVeya() {
   );
 
   const startNewInterview = useCallback(() => {
+    clearSession();
     setShowReportModal(false);
     setReport(null);
     setTranscript([]);
@@ -413,15 +471,36 @@ export function useVeya() {
           if (result.finished) {
             setReport(result.report);
             pushLine("assistant", "That's the end of the interview. Great work!");
+            saveSession({
+              mode: "finished",
+              currentQuestion: null,
+              lastFeedback: { score: result.score, feedback: result.feedback },
+            });
             setState("finished");
             setShowReportModal(true);
             return;
           }
 
-          const nextQ = getNonRepeatingQuestion(result.next_question, currentQuestion, transcript, difficulty);
-          setQuestionNumber((n) => n + 1);
+          const activeDiff = result.difficulty || difficulty;
+          if (result.difficulty) setDifficulty(result.difficulty);
+
+          const nextQ = getNonRepeatingQuestion(result.next_question, currentQuestion, transcript, activeDiff);
+          const nextNum = questionNumber + 1;
+          setQuestionNumber(nextNum);
           setCurrentQuestion(nextQ);
           pushLine("assistant", nextQ);
+
+          saveSession({
+            questionNumber: nextNum,
+            currentQuestion: nextQ,
+            difficulty: activeDiff,
+            lastFeedback: { score: result.score, feedback: result.feedback },
+            transcript: [
+              ...transcript,
+              { role: "user", text, id: `user-${Date.now()}` },
+              { role: "assistant", text: nextQ, id: `assistant-${Date.now()}` },
+            ],
+          });
           setState("idle");
         } else {
           pushLine("user", text);

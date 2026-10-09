@@ -1,7 +1,15 @@
 const STORAGE_KEY = "veya.session.v2";
 
-const defaultSession = () => ({
+export const defaultSession = () => ({
   sessionId: null,
+  difficulty: "medium",
+  questionLimit: 5,
+  questionNumber: 0,
+  currentQuestion: null,
+  mode: "assistant",
+  transcript: [],
+  lastFeedback: null,
+  jobRole: "",
 });
 
 export function loadSession() {
@@ -16,12 +24,13 @@ export function loadSession() {
   }
 }
 
-export function saveSession(session) {
+export function saveSession(patch) {
   try {
-    localStorage.setItem(STORAGE_KEY, JSON.stringify(session));
+    const current = loadSession();
+    const updated = { ...current, ...patch };
+    localStorage.setItem(STORAGE_KEY, JSON.stringify(updated));
+    return updated;
   } catch (err) {
-    // localStorage can throw in private-browsing / quota-exceeded cases.
-    // Non-fatal — the session just won't persist across reloads.
     console.warn("Failed to save session:", err);
   }
 }

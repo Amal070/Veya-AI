@@ -66,6 +66,9 @@ Ensure all identified technologies, tools, and libraries appear in the "technolo
 """
 
 
+from app.difficulty import get_difficulty_config
+
+
 def build_question_generation_prompt(
     profile: dict[str, Any] | None,
     raw_context: str,
@@ -73,9 +76,11 @@ def build_question_generation_prompt(
     difficulty: str,
     target_category: str,
     asked_questions: list[str],
+    job_role: str = "",
 ) -> str:
-    """Build a strongly grounded, anti-hallucination prompt for the LLM interviewer."""
+    """Build a strongly grounded, difficulty-enforced prompt for the LLM interviewer."""
     profile = profile or {}
+    diff_cfg = get_difficulty_config(difficulty)
 
     # Format structured profile highlights for the prompt
     projects_summary = []
@@ -115,7 +120,7 @@ def build_question_generation_prompt(
         if is_skipped:
             last_turn_guidance = f"""
 The candidate explicitly SKIPPED the previous question: "{last_q}".
-CRITICAL: Do NOT follow up or re-ask anything related to that skipped topic. Move to a completely fresh topic from their resume.
+CRITICAL: Do NOT follow up or re-ask anything related to that skipped topic. Move to a completely fresh topic from their resume at {difficulty.upper()} difficulty.
 """
         elif last_a and len(last_a.strip()) > 3:
             last_turn_guidance = f"""
@@ -123,35 +128,37 @@ Previous Q: "{last_q}"
 Candidate's Answer: "{last_a}" (Score: {last_score}/10)
 
 FOLLOW-UP DIRECTIVE:
-If appropriate for this turn, acknowledge or probe deeper into the specific choices, architecture, or tools the candidate mentioned in their answer.
-If their answer was strong, ask a deeper architectural or edge-case question.
-If their answer was vague, ask a targeted clarifying question about their specific implementation.
+If this turn is a follow-up, build naturally upon the candidate's previous response while STRICTLY MAINTAINING THE {difficulty.upper()} ({diff_cfg.level}) DIFFICULTY LEVEL.
+- Under EASY: ask a clear clarifying question on basic concepts, why a tool was used, or their specific role. DO NOT escalate to system optimization or distributed architecture.
+- Under MEDIUM: probe practical implementation details, troubleshooting, or technical rationale behind their choices.
+- Under HARD: probe system resilience, security implications, scalability limits, or concurrency edge cases.
+CRITICAL CONSTRAINT: Do NOT increase or decrease complexity based on whether the candidate answered well or poorly. The selected difficulty ({difficulty.upper()}) must remain the controlling constraint across the entire interview.
 """
 
     category_instructions = {
         "resume_project": (
-            "Focus strongly on a specific PROJECT from the candidate's resume. "
-            "Ask about its architecture, why they selected specific technologies, how components connected, "
-            "technical challenges they overcame, trade-offs made, or how they verified/tested it."
+            f"Focus on a specific PROJECT from the candidate's resume. "
+            f"For {difficulty.upper()}, match technical depth: {diff_cfg.technical_depth}."
         ),
         "technical_skill": (
-            "Focus on a specific TECHNICAL SKILL, LANGUAGE, or FRAMEWORK explicitly present in the resume. "
-            "Ask a practical conceptual or design question appropriate for their apparent experience level."
+            f"Focus on a specific TECHNICAL SKILL, LANGUAGE, or FRAMEWORK explicitly present in the resume. "
+            f"For {difficulty.upper()}, test: {diff_cfg.technical_depth}."
         ),
         "role_specific": (
-            "Ask an applied engineering question regarding best practices, system design, API design, or debugging "
-            "using the tech stack present in their resume."
+            f"Ask an applied engineering question for the role {job_role or 'software engineer'} "
+            f"using the tech stack present in their resume at {difficulty.upper()} depth."
         ),
         "behavioral": (
-            "Ask a targeted behavioral/engineering collaboration question grounded in their actual project experiences "
-            "or work history (e.g. dealing with technical disagreements, production bugs, or shifting requirements)."
+            "Ask a targeted engineering collaboration or problem-solving question grounded in their actual project experiences "
+            "or work history (e.g. debugging under pressure, code reviews, or design decisions)."
         ),
         "problem_solving": (
-            "Present a realistic engineering scenario or failure mode related to their project or tech stack "
-            "(e.g. data consistency, caching, latency bottleneck, query optimization) and ask how they would diagnose and resolve it."
+            f"Present an engineering scenario related to their tech stack matching {difficulty.upper()} complexity "
+            f"({diff_cfg.scenario_complexity}) and ask how they would handle it."
         ),
         "follow_up": (
-            "Formulate a natural, context-aware follow-up question building directly upon the candidate's previous response."
+            f"Formulate a context-aware follow-up question building directly upon the candidate's previous answer "
+            f"at the strict {difficulty.upper()} difficulty level."
         ),
     }
 
@@ -161,6 +168,7 @@ If their answer was vague, ask a targeted clarifying question about their specif
 
     resume_section = f"""<verified_resume_profile>
 Candidate: {candidate_name}
+Target Role: {job_role or "Software Engineer"}
 Summary: {summary or "N/A"}
 Explicit Technologies/Skills: {", ".join(all_tech) if all_tech else "Not specified"}
 Projects:
@@ -176,9 +184,17 @@ Work Experience / Internships:
     prompt = f"""You are an elite AI technical interviewer conducting a live voice mock interview.
 
 INTERVIEW SPECIFICATIONS:
-- Target Difficulty: {difficulty.upper()}
+- Target Difficulty: {difficulty.upper()} ({diff_cfg.level} Level)
+- Complexity Level: {diff_cfg.complexity}
+- Required Reasoning: {diff_cfg.reasoning}
+- Scenario Complexity: {diff_cfg.scenario_complexity}
+- Technical Depth: {diff_cfg.technical_depth}
+- Target Job Role: {job_role or "Software Engineer"}
 - Target Question Category: {target_category} ({selected_category_desc})
 - Current Question Number: {len(previous_qa) + 1}
+
+DIFFICULTY DIRECTIVE:
+{diff_cfg.question_guide}
 
 {resume_section}
 
@@ -188,12 +204,15 @@ QUESTIONS ALREADY ASKED IN THIS SESSION:
 {last_turn_guidance}
 
 STRICT INTERVIEWER RULES:
-1. GROUNDED IN RESUME: You must FIRST understand the candidate's actual background. Every question must be grounded in the candidate's verified resume (their projects, technologies, tools, or past experience).
-2. NEVER HALLUCINATE: Do NOT assume or invent technologies that are NOT present in the resume. If the resume has Python, Django, PostgreSQL, and Blockchain, do NOT ask about AWS, Kubernetes, Docker, or React unless they explicitly appear in the resume!
-3. DEEP PROJECT PROBING: When asking about a project, reference the actual project name and technologies mentioned (e.g., "In your certificate verification project using Django and blockchain..."). Inquire into architecture, design choices, data flow, security, or trade-offs.
+1. GROUNDED IN RESUME: Every question must be grounded in the candidate's verified resume (their projects, technologies, tools, or past experience). If the target job role requires a standard concept, relate it to their background.
+2. NEVER HALLUCINATE: Do NOT assume or invent technologies that are NOT present in the resume. If the resume has Python, Django, PostgreSQL, and Blockchain, do NOT ask about AWS, Kubernetes, or React unless they explicitly appear in the resume!
+3. STRICT DIFFICULTY ENFORCEMENT:
+   - EASY: Beginner level. Ask about fundamental definitions, purpose of projects, why a technology was chosen, or core language concepts (e.g., list vs tuple, primary keys, project features). DO NOT ask about architecture tradeoffs, scalability, or distributed systems.
+   - MEDIUM: Intermediate level. Ask about practical implementation, how components integrate, troubleshooting, trade-offs between technologies, and design choices.
+   - HARD: Advanced level. Ask about system scalability under high concurrency, security exploits & mitigation, edge-case failure modes, architectural trade-offs, and root-cause debugging.
 4. STRICT UNIQUENESS: NEVER repeat, rephrase, or ask a question semantically equivalent to any question already asked.
 5. VOICE-FRIENDLY & NATURAL: The question will be spoken aloud to the candidate via Text-to-Speech. Keep it concise (15 to 28 words), natural, and clear. Avoid robotic phrases like "Based on section 2 of your resume".
-6. NO CODING PUZZLES: Do NOT ask the candidate to write syntax, solve LeetCode algorithms on a whiteboard, or write SQL queries line-by-line. Focus on architectural reasoning, technical depth, design choices, and problem-solving.
+6. NO CODE PUZZLES: Do NOT ask the candidate to write syntax on a whiteboard or solve LeetCode algorithm puzzles line-by-line. Focus on conceptual clarity, engineering reasoning, and practical experience appropriate to {difficulty.upper()}.
 7. OUTPUT FORMAT: Return ONLY the exact question text. No introductory remarks, no numbering, no markdown formatting, no explanations. Exactly one question ending with a question mark.
 """
     return prompt.strip()

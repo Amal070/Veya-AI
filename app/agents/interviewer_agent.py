@@ -2,6 +2,7 @@ import logging
 import re
 from typing import Any
 
+from app.difficulty import normalize_difficulty
 from app.llm import LLMUnavailableError, safe_ainvoke, strip_think_tags
 from app.prompts.interview_prompts import build_question_generation_prompt
 from app.services.resume_cache import resume_context_cache
@@ -10,39 +11,40 @@ logger = logging.getLogger(__name__)
 
 _FALLBACK_QUESTIONS = {
     "easy": [
-        "Can you tell me about a project you're proud of and what your role was?",
-        "How do you approach debugging when an application throws an unexpected error?",
-        "What is your process for collaborating with teammates during code reviews?",
-        "How do you prioritize your work when balancing multiple competing deadlines?",
-        "Describe a time you had to quickly learn and adopt a new tool or technology.",
-        "How do you ensure your code is maintainable and well-documented for others?",
+        "Can you explain the main purpose and features of your project?",
+        "What is Django, and why did you use it in your project?",
+        "What is the difference between a list and a tuple in Python?",
+        "What is a primary key in a relational database?",
+        "Can you tell me about a project on your resume you are most proud of?",
+        "What core skills and technologies did you contribute to your most recent project?",
     ],
     "medium": [
+        "How did you connect your backend services with your database in your project?",
+        "How would you optimize a slow database query in your project?",
+        "How would you implement secure JWT authentication in a web application?",
+        "How would you debug an API endpoint that returns unexpected or incorrect results?",
         "Walk me through a technical challenge you faced recently and how you solved it.",
-        "How do you design RESTful or GraphQL APIs for high reliability and clean versioning?",
-        "Explain how you identify and resolve database query performance bottlenecks.",
         "How do you prevent race conditions and manage state in asynchronous systems?",
-        "Describe your approach to designing resilient error handling and retry mechanisms.",
-        "What strategies do you use for containerization and automated CI/CD deployments?",
     ],
     "hard": [
+        "How would you redesign your system to handle millions of requests while maintaining data integrity?",
+        "What security risks could arise from your authentication design, and how would you mitigate them?",
+        "How would you investigate a database bottleneck under heavy concurrent traffic?",
+        "How would you prevent race conditions and duplicate processing in a high-traffic API?",
         "Describe a difficult architectural trade-off you made and what constraints guided your decision.",
         "How do you ensure data consistency across distributed microservices under network partitions?",
-        "Walk me through how you design a multi-tier caching layer to prevent cache stampedes.",
-        "How would you architect a zero-downtime schema migration strategy for high-throughput tables?",
-        "Explain how you structure observability, distributed tracing, and MTTR alerting at scale.",
-        "How do you mitigate cascading failures and rate-limit abusive traffic across clusters?",
     ],
 }
 
 
 def _get_unused_fallback(difficulty: str, asked_questions: list[str]) -> str:
-    pool = _FALLBACK_QUESTIONS.get(difficulty, _FALLBACK_QUESTIONS["medium"])
+    diff = normalize_difficulty(difficulty)
+    pool = _FALLBACK_QUESTIONS.get(diff, _FALLBACK_QUESTIONS["medium"])
     asked_norm = {_normalize(q) for q in asked_questions}
     for candidate in pool:
         if _normalize(candidate) not in asked_norm:
             return candidate
-    return f"Can you describe an important engineering lesson you learned while solving a complex {difficulty}-level problem?"
+    return f"Can you describe an important engineering lesson you learned while solving a {diff}-level technical problem?"
 
 
 STOPWORDS = {
@@ -125,42 +127,83 @@ def _build_dynamic_resume_fallback(
     asked_questions: list[str],
 ) -> str:
     """Synthesize a dynamic question grounded strictly in candidate's resume when LLM is unavailable."""
+    diff = normalize_difficulty(difficulty)
     profile = profile or {}
     projects = profile.get("projects", [])
     technologies = profile.get("technologies", []) or profile.get("skills", [])
 
     candidates: list[str] = []
 
-    # 1. Project-specific candidates
+    # 1. Project-specific candidates based on difficulty
     for p in projects:
         p_name = p.get("name", "") if isinstance(p, dict) else str(p)
         p_techs = p.get("technologies", []) if isinstance(p, dict) else []
         tech_str = p_techs[0] if p_techs else ""
 
-        if p_name:
+        if not p_name:
+            continue
+
+        if diff == "easy":
+            candidates.append(
+                f"Can you explain the main purpose and key features of your {p_name} project?"
+            )
             if tech_str:
                 candidates.append(
-                    f"In your {p_name} project using {tech_str}, what was the most complex architectural decision you had to make?"
+                    f"What led you to choose {tech_str} for your {p_name} project?"
                 )
-                candidates.append(
-                    f"How did you test and validate the implementation of your {p_name} system?"
-                )
-            else:
-                candidates.append(
-                    f"Can you explain the system architecture and data flow of your {p_name} project?"
-                )
-                candidates.append(
-                    f"What technical challenges did you encounter while building {p_name}, and how did you resolve them?"
-                )
-
-    # 2. Technology / skill candidates
-    for tech in technologies:
-        if tech:
             candidates.append(
-                f"How do you approach performance optimization and error handling when working with {tech}?"
+                f"What were your primary responsibilities and contributions on the {p_name} project?"
+            )
+        elif diff == "hard":
+            candidates.append(
+                f"How would you redesign {p_name} to handle millions of requests while maintaining data integrity?"
             )
             candidates.append(
-                f"In your experience with {tech}, what are the key trade-offs you consider during system design?"
+                f"What security risks or vulnerabilities could arise in {p_name}, and how would you mitigate them?"
+            )
+            if tech_str:
+                candidates.append(
+                    f"What architectural trade-offs did you make when implementing {p_name} using {tech_str}?"
+                )
+            candidates.append(
+                f"How would you prevent race conditions and duplicate operations in {p_name} under heavy concurrency?"
+            )
+        else:  # medium
+            if tech_str:
+                candidates.append(
+                    f"How did you connect {tech_str} with the rest of your architecture in the {p_name} project?"
+                )
+            candidates.append(
+                f"What technical challenge did you face while building {p_name}, and how did you solve it?"
+            )
+            candidates.append(
+                f"How did you test and validate the components of your {p_name} system?"
+            )
+
+    # 2. Technology / skill candidates based on difficulty
+    for tech in technologies:
+        if not tech:
+            continue
+        if diff == "easy":
+            candidates.append(
+                f"What is {tech}, and what are its core advantages in modern development?"
+            )
+            candidates.append(
+                f"What fundamental concepts of {tech} did you use most frequently in your work?"
+            )
+        elif diff == "hard":
+            candidates.append(
+                f"How would you investigate and resolve severe performance bottlenecks or memory leaks when using {tech}?"
+            )
+            candidates.append(
+                f"What are the most critical architectural failure modes and edge cases when working with {tech} at scale?"
+            )
+        else:  # medium
+            candidates.append(
+                f"How do you approach error handling and testing when developing applications with {tech}?"
+            )
+            candidates.append(
+                f"In your experience with {tech}, what key trade-offs do you consider during implementation?"
             )
 
     # Filter out questions that have already been asked
@@ -168,26 +211,44 @@ def _build_dynamic_resume_fallback(
         if not _is_semantically_duplicate(cand, asked_questions):
             return cand
 
-    # If all profile-specific candidates exhausted or no profile, return non-repeating general technical question
-    generic_pool = [
-        f"Walk me through a difficult technical debugging scenario you resolved in a {difficulty} engineering task.",
-        f"How do you approach designing resilient API contracts and data models under changing requirements?",
-        f"What strategies do you employ to prevent performance bottlenecks and data inconsistencies in production systems?",
-        f"Describe an architectural trade-off where you had to balance development speed against long-term maintainability.",
-    ]
+    # If all profile-specific candidates exhausted or no profile, return non-repeating difficulty-matched technical question
+    if diff == "easy":
+        generic_pool = [
+            "What is the difference between a list and a tuple in Python?",
+            "What is a primary key in a relational database, and why is it important?",
+            "Can you explain how you approach debugging when an application throws a simple error?",
+            "What are the key differences between synchronous and asynchronous code execution?",
+        ]
+    elif diff == "hard":
+        generic_pool = [
+            "How would you investigate a database bottleneck under heavy concurrent traffic?",
+            "How do you ensure data consistency across distributed microservices under network partitions?",
+            "How would you architect a zero-downtime schema migration strategy for high-throughput tables?",
+            "How do you mitigate cascading failures and rate-limit abusive traffic across distributed clusters?",
+        ]
+    else:  # medium
+        generic_pool = [
+            "How would you optimize a slow SQL database query in your application?",
+            "How would you implement JWT authentication and authorization in a backend API?",
+            "How do you design RESTful APIs for high reliability, clean error handling, and versioning?",
+            "How do you prevent race conditions and manage state in asynchronous systems?",
+        ]
+
     for g in generic_pool:
         if not _is_semantically_duplicate(g, asked_questions):
             return g
 
-    return f"Can you describe a key technical decision you made while solving a complex {difficulty}-level engineering challenge?"
+    return _get_unused_fallback(diff, asked_questions)
 
 
 async def generate_question(
     previous_qa: list[dict[str, Any]] | None = None,
     difficulty: str = "medium",
     session_id: str = "",
+    job_role: str = "",
 ) -> str:
     """Generate a dynamic, resume-grounded interview question with deduplication and context-awareness."""
+    diff = normalize_difficulty(difficulty)
     previous_qa = previous_qa or []
     asked_questions = [qa["question"] for qa in previous_qa if "question" in qa]
     question_number = len(previous_qa) + 1
@@ -201,8 +262,12 @@ async def generate_question(
     # Determine target category
     target_category = _get_target_category(question_number, previous_qa)
 
-    # Logging as specified in Step 13
-    logger.info("[AI] Generating question %d", question_number)
+    logger.info(
+        "[AI] Generating question %d (difficulty=%s, role=%s)",
+        question_number,
+        diff,
+        job_role or "N/A",
+    )
     logger.info("[AI] Previous questions: %d", len(asked_questions))
     logger.info("[AI] Resume context included: %s", "YES" if has_resume else "NO")
 
@@ -211,9 +276,10 @@ async def generate_question(
         profile=profile,
         raw_context=context,
         previous_qa=previous_qa,
-        difficulty=difficulty,
+        difficulty=diff,
         target_category=target_category,
         asked_questions=asked_questions,
+        job_role=job_role,
     )
 
     # Try LLM generation with deduplication retry
@@ -238,7 +304,7 @@ async def generate_question(
 
             # Verify question is non-empty and non-duplicate
             if question and len(question) > 10 and not _is_semantically_duplicate(question, asked_questions):
-                logger.info("[AI] Generated question: %s", question)
+                logger.info("[AI] Generated question (%s): %s", diff, question)
                 return question
 
             logger.warning(
@@ -247,12 +313,12 @@ async def generate_question(
                 question,
             )
             # Add explicit anti-duplicate reminder to prompt for retry
-            prompt += f"\nCRITICAL: The question '{question}' was duplicate or too similar to past questions. Ask about a completely different project or technology from the resume."
+            prompt += f"\nCRITICAL: The question '{question}' was duplicate or too similar to past questions. Ask about a completely different project or technology from the resume at {diff.upper()} difficulty."
 
         except (LLMUnavailableError, Exception) as e:
             logger.error("[AI] LLM question generation failed (attempt %d): %s", attempt + 1, e)
 
     # Dynamic fallback grounded in actual resume
-    fallback_question = _build_dynamic_resume_fallback(profile, difficulty, asked_questions)
-    logger.info("[AI] Generated question (grounded fallback): %s", fallback_question)
+    fallback_question = _build_dynamic_resume_fallback(profile, diff, asked_questions)
+    logger.info("[AI] Generated question (grounded fallback - %s): %s", diff, fallback_question)
     return fallback_question

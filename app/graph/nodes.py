@@ -14,6 +14,7 @@ async def question_node(state):
         previous_qa=state["history"],
         difficulty=state["difficulty"],
         session_id=state.get("session_id", ""),
+        job_role=state.get("job_role", ""),
     )
 
     # `interrupt()` pauses the graph here and returns control to the caller;
@@ -27,7 +28,11 @@ async def question_node(state):
 
 
 async def evaluation_node(state):
-    evaluation = await evaluate_answer(state["current_question"], state["current_answer"])
+    evaluation = await evaluate_answer(
+        question=state["current_question"],
+        answer=state["current_answer"],
+        difficulty=state.get("difficulty", "medium"),
+    )
 
     return {
         "score": evaluation["score"],
@@ -36,11 +41,10 @@ async def evaluation_node(state):
 
 
 def history_node(state):
-    """Append the completed Q&A turn to history and adapt difficulty.
+    """Append the completed Q&A turn to history and preserve selected difficulty.
 
-    Returns only the changed keys (LangGraph merges partial updates into
-    state) instead of mutating + returning the whole state dict, which is
-    safer under the graph's checkpoint/replay semantics.
+    The user-selected difficulty remains the controlling constraint across the
+    entire interview session, preventing arbitrary level switching.
     """
     new_entry = {
         "question": state["current_question"],
@@ -50,22 +54,9 @@ def history_node(state):
     }
     new_history = [*state["history"], new_entry]
 
-    # Adaptive difficulty: trend-aware rather than single-answer reactive.
-    # Look at the last up-to-3 scores so one lucky/unlucky answer doesn't
-    # whiplash the difficulty.
-    recent_scores = [h["score"] for h in new_history[-3:]]
-    avg_recent = sum(recent_scores) / len(recent_scores)
-
-    if avg_recent >= 7.5:
-        difficulty = "hard"
-    elif avg_recent <= 4:
-        difficulty = "easy"
-    else:
-        difficulty = "medium"
-
     return {
         "history": new_history,
-        "difficulty": difficulty,
+        "difficulty": state["difficulty"],
         "question_count": state["question_count"] + 1,
     }
 

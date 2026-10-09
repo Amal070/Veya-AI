@@ -14,6 +14,7 @@ export default function InterviewSetupModal({ open, onClose, onBegin }) {
   const [difficulty, setDifficulty] = useState("medium");
   const [preset, setPreset] = useState(5);
   const [customCount, setCustomCount] = useState("");
+  const [jobRole, setJobRole] = useState("");
   const [starting, setStarting] = useState(false);
 
   const isCustom = preset === "custom";
@@ -24,7 +25,7 @@ export default function InterviewSetupModal({ open, onClose, onBegin }) {
     if (!canStart) return;
     setStarting(true);
     try {
-      await onBegin({ questionLimit: resolvedCount, difficulty });
+      await onBegin({ questionLimit: resolvedCount, difficulty, jobRole: jobRole.trim() });
     } finally {
       setStarting(false);
     }
@@ -135,6 +136,24 @@ export default function InterviewSetupModal({ open, onClose, onBegin }) {
               }}
             />
           )}
+        </div>
+
+        <div>
+          <div className="mb-2 flex items-center gap-2 text-xs font-medium text-[var(--color-text-low)]">
+            Target role (optional)
+          </div>
+          <input
+            type="text"
+            value={jobRole}
+            onChange={(e) => setJobRole(e.target.value)}
+            placeholder="e.g. Python Developer, Full Stack Engineer"
+            className="w-full rounded-xl px-3 py-2.5 text-sm outline-none"
+            style={{
+              background: "var(--color-surface)",
+              border: "1px solid var(--color-border-glass)",
+              color: "var(--color-text-hi)",
+            }}
+          />
         </div>
 
         <button
