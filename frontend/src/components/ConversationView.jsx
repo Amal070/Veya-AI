@@ -60,8 +60,13 @@ export default function ConversationView({ transcript, onSelectPrompt }) {
         {/* Empty State: High-tech Welcome & Quick-start Prompts */}
         {transcript.length === 0 && (
           <div className="m-auto flex w-full max-w-md flex-col items-center text-center py-4" style={{ animation: "fade-up 0.4s ease-out" }}>
-            <div className="flex h-10 w-10 items-center justify-center rounded-2xl bg-cyan-500/10 border border-cyan-400/30 text-cyan-300 mb-3 shadow-[0_0_15px_rgba(34,211,238,0.2)]">
-              <Sparkles size={18} />
+            <div className="relative flex items-center justify-center mb-3">
+              <div className="absolute -inset-1 rounded-full bg-gradient-to-r from-purple-600 to-cyan-400 opacity-60 blur-xs" />
+              <img
+                src="/logo.png"
+                alt="Veya AI"
+                className="relative h-10 w-10 rounded-full object-cover ring-1 ring-white/30 shadow-lg shadow-purple-900/30"
+              />
             </div>
 
             <h3 className="text-sm font-semibold text-white tracking-tight">

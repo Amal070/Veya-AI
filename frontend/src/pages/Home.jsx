@@ -117,9 +117,13 @@ export default function Home() {
 
       {/* Top Futuristic Cockpit HUD Bar */}
       <header className="flex w-full max-w-3xl items-center justify-between py-3.5 mb-6 border-b border-white/10 bg-[#070711]/60 backdrop-blur-xl px-5 rounded-2xl">
-        <div className="flex items-center gap-3">
+        <button
+          type="button"
+          onClick={() => setHasStarted(false)}
+          className="flex items-center gap-3 text-left cursor-pointer group transition-transform hover:scale-[1.02]"
+        >
           <div className="relative flex items-center justify-center">
-            <div className="absolute -inset-1 rounded-full bg-gradient-to-r from-purple-600 to-cyan-400 opacity-60 blur-xs" />
+            <div className="absolute -inset-1 rounded-full bg-gradient-to-r from-purple-600 to-cyan-400 opacity-60 blur-xs group-hover:opacity-90 transition-opacity" />
             <img
               src="/logo.png"
               alt="Veya AI"
@@ -129,7 +133,7 @@ export default function Home() {
           <div>
             <div className="flex items-center gap-2">
               <span
-                className="text-base font-bold text-white tracking-tight"
+                className="text-base font-bold text-white tracking-tight group-hover:text-cyan-200 transition-colors"
                 style={{ fontFamily: "var(--font-display)" }}
               >
                 Veya AI
@@ -139,7 +143,7 @@ export default function Home() {
               </span>
             </div>
           </div>
-        </div>
+        </button>
 
         <div className="flex items-center gap-3">
           {mm.mode === "assistant" && (
@@ -169,7 +173,7 @@ export default function Home() {
       <div className="flex w-full max-w-2xl flex-1 flex-col items-center gap-6">
         {/* Futuristic Orb & Acoustic Halo Stage */}
         <div className="flex flex-col items-center gap-3 my-1">
-          <VoiceOrb state={orbState} size={150} />
+          <VoiceOrb state={orbState} size={160} />
           
           <div className="flex items-center gap-2 rounded-full px-3 py-1 bg-white/[0.03] border border-white/10 backdrop-blur-sm">
             <span className="h-1.5 w-1.5 rounded-full bg-cyan-400 animate-pulse" />

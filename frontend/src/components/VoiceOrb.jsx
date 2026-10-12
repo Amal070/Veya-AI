@@ -2,20 +2,25 @@ import React from "react";
 
 /**
  * VoiceOrb — Signature 3D acoustic orb indicator for Veya AI.
- * Enhanced with futuristic concentric acoustic radar rings,
- * dual-layer ambient chromatic glow, and state-driven particle pulses.
+ * Features the signature Veya AI mascot logo from the homepage,
+ * surrounded by concentric acoustic radar rings, chromatic glow,
+ * and state-driven sound pulses.
  */
 const RING_COUNT = { idle: 1, listening: 2, thinking: 1, speaking: 3 };
 
-export default function VoiceOrb({ state = "idle", size = 180, level = 0 }) {
+export default function VoiceOrb({
+  state = "idle",
+  size = 180,
+  level = 0,
+  showLogo = true,
+}) {
   const isListening = state === "listening";
   const isThinking = state === "thinking";
   const isSpeaking = state === "speaking";
 
   const levelScale = isListening ? 1 + Math.min(level, 1) * 0.12 : 1;
   const swirlDuration = isSpeaking ? "2.8s" : isThinking ? "4s" : "12s";
-  const coreScale = isThinking ? 0.88 : isSpeaking ? 1.08 : 1;
-  const coreOpacity = state === "idle" ? 0.65 : 1;
+  const coreScale = isThinking ? 0.92 : isSpeaking ? 1.06 : 1;
 
   return (
     <div
@@ -34,11 +39,11 @@ export default function VoiceOrb({ state = "idle", size = 180, level = 0 }) {
     >
       {/* Outer Acoustic Hologram Ring 1 */}
       <div
-        className="pointer-events-none absolute -inset-6 rounded-full border border-cyan-500/20"
+        className="pointer-events-none absolute -inset-6 rounded-full border border-cyan-500/25"
         style={{
           boxShadow: isSpeaking
-            ? "0 0 30px rgba(34, 211, 238, 0.25)"
-            : "0 0 15px rgba(139, 92, 246, 0.15)",
+            ? "0 0 30px rgba(34, 211, 238, 0.35)"
+            : "0 0 15px rgba(139, 92, 246, 0.2)",
           animation: "spin-orbit 20s linear infinite",
         }}
       >
@@ -47,9 +52,9 @@ export default function VoiceOrb({ state = "idle", size = 180, level = 0 }) {
 
       {/* Outer Acoustic Hologram Ring 2 (Counter-spin) */}
       <div
-        className="pointer-events-none absolute -inset-3 rounded-full border border-purple-500/20"
+        className="pointer-events-none absolute -inset-3 rounded-full border border-purple-500/25"
         style={{
-          boxShadow: "0 0 20px rgba(139, 92, 246, 0.15)",
+          boxShadow: "0 0 20px rgba(139, 92, 246, 0.2)",
           animation: "spin-orbit-reverse 26s linear infinite",
         }}
       >
@@ -78,7 +83,7 @@ export default function VoiceOrb({ state = "idle", size = 180, level = 0 }) {
 
       {/* Outer Drifting Gradient Aura (Atmospheric depth) */}
       <div
-        className="absolute rounded-full opacity-80 blur-2xl transition-all duration-700"
+        className="absolute rounded-full opacity-75 blur-2xl transition-all duration-700 pointer-events-none"
         style={{
           inset: "8%",
           background: isListening
@@ -90,35 +95,84 @@ export default function VoiceOrb({ state = "idle", size = 180, level = 0 }) {
 
       {/* Mid Swirl Layer */}
       <div
-        className="absolute rounded-full"
+        className="absolute rounded-full pointer-events-none"
         style={{
-          inset: "16%",
+          inset: "14%",
           background: isListening
             ? "conic-gradient(from 90deg, #FB7185, #8B5CF6, #FB7185)"
             : "conic-gradient(from 90deg, #22D3EE, #8B5CF6, #3B82F6, #22D3EE)",
-          opacity: isThinking ? 0.9 : 0.7,
-          filter: "blur(12px)",
+          opacity: isThinking ? 0.8 : 0.5,
+          filter: "blur(10px)",
           animation: `orb-swirl ${swirlDuration} linear infinite`,
         }}
       />
 
-      {/* 3D Glass Core with Specular Reflection */}
-      <div
-        className="absolute rounded-full transition-transform duration-500 ease-out"
-        style={{
-          inset: "26%",
-          background:
-            "radial-gradient(circle at 35% 30%, rgba(255,255,255,0.95), rgba(220,230,255,0.4) 40%, rgba(139,92,246,0.2) 70%, transparent 100%)",
-          opacity: coreOpacity,
-          transform: `scale(${coreScale * levelScale})`,
-          animation: isThinking ? "orb-contract 1.8s ease-in-out infinite" : undefined,
-          boxShadow: isSpeaking
-            ? "0 0 70px 12px rgba(34,211,238,0.45), inset 0 0 20px rgba(255,255,255,0.6)"
-            : isListening
-            ? "0 0 50px 8px rgba(244,63,94,0.35), inset 0 0 15px rgba(255,255,255,0.5)"
-            : "0 0 35px 2px rgba(139,92,246,0.25), inset 0 0 12px rgba(255,255,255,0.4)",
-        }}
-      />
+      {/* Central 3D Core with Homepage Logo */}
+      {showLogo ? (
+        <div
+          className="relative rounded-full transition-all duration-500 ease-out flex items-center justify-center overflow-hidden p-1"
+          style={{
+            width: "60%",
+            height: "60%",
+            transform: `scale(${coreScale * levelScale})`,
+            animation: isThinking
+              ? "orb-contract 1.8s ease-in-out infinite"
+              : "float-3d 5s ease-in-out infinite",
+            background:
+              "linear-gradient(135deg, rgba(34, 211, 238, 0.4), rgba(139, 92, 246, 0.4), rgba(59, 130, 246, 0.25))",
+            boxShadow: isSpeaking
+              ? "0 0 45px 8px rgba(34,211,238,0.55), inset 0 0 15px rgba(255,255,255,0.4)"
+              : isListening
+              ? "0 0 40px 8px rgba(244,63,94,0.5), inset 0 0 15px rgba(255,255,255,0.4)"
+              : isThinking
+              ? "0 0 35px 6px rgba(139,92,246,0.5), inset 0 0 12px rgba(255,255,255,0.3)"
+              : "0 0 25px 4px rgba(139,92,246,0.35), inset 0 0 10px rgba(255,255,255,0.25)",
+          }}
+        >
+          <img
+            src="/logo.png"
+            alt="Veya AI Mascot"
+            className="h-full w-full rounded-full object-cover ring-1 ring-white/30 select-none pointer-events-none transition-all duration-300"
+            draggable="false"
+            style={{
+              filter: isListening
+                ? "brightness(1.15) drop-shadow(0 0 12px rgba(244,63,94,0.6))"
+                : isSpeaking
+                ? "brightness(1.2) drop-shadow(0 0 16px rgba(34,211,238,0.7))"
+                : isThinking
+                ? "brightness(1.1) drop-shadow(0 0 12px rgba(139,92,246,0.6))"
+                : "brightness(1.0) drop-shadow(0 0 8px rgba(139,92,246,0.35))",
+            }}
+          />
+
+          {/* 3D Glass Specular Reflection Overlay */}
+          <div
+            className="pointer-events-none absolute inset-0 rounded-full"
+            style={{
+              background:
+                "radial-gradient(circle at 35% 25%, rgba(255,255,255,0.4) 0%, rgba(255,255,255,0.06) 40%, transparent 70%)",
+            }}
+          />
+        </div>
+      ) : (
+        /* Fallback Glass Core */
+        <div
+          className="absolute rounded-full transition-transform duration-500 ease-out"
+          style={{
+            inset: "26%",
+            background:
+              "radial-gradient(circle at 35% 30%, rgba(255,255,255,0.95), rgba(220,230,255,0.4) 40%, rgba(139,92,246,0.2) 70%, transparent 100%)",
+            opacity: state === "idle" ? 0.65 : 1,
+            transform: `scale(${coreScale * levelScale})`,
+            animation: isThinking ? "orb-contract 1.8s ease-in-out infinite" : undefined,
+            boxShadow: isSpeaking
+              ? "0 0 70px 12px rgba(34,211,238,0.45), inset 0 0 20px rgba(255,255,255,0.6)"
+              : isListening
+              ? "0 0 50px 8px rgba(244,63,94,0.35), inset 0 0 15px rgba(255,255,255,0.5)"
+              : "0 0 35px 2px rgba(139,92,246,0.25), inset 0 0 12px rgba(255,255,255,0.4)",
+          }}
+        />
+      )}
     </div>
   );
 }
