@@ -1,108 +1,69 @@
 import React from "react";
-import { ArrowRight, Mic, Sparkles, ShieldCheck, Zap, Headphones } from "lucide-react";
+import { ArrowRight, Mic, CheckCircle2 } from "lucide-react";
 
 /**
- * CtaSection — Section 4: "Ready to practice smarter?"
- * Features a glowing background AI orb element, glassmorphic card, and dual action triggers.
+ * CtaSection — Single, focused final call to action before the footer.
+ * Balanced design with high-contrast copy and clean action buttons.
  */
 export default function CtaSection({ onStartInterview, onTalkToVeya }) {
   return (
-    <section id="cta" className="relative py-32 px-6 overflow-hidden">
-      {/* Central Glowing AI Orb Element in background */}
-      <div className="pointer-events-none absolute left-1/2 top-1/2 -translate-x-1/2 -translate-y-1/2 flex items-center justify-center">
-        {/* Pulsing Outer Rings */}
-        <div
-          className="absolute h-[500px] w-[500px] rounded-full border border-cyan-500/20 blur-[2px]"
-          style={{ animation: "orb-pulse-ring 3s ease-out infinite" }}
-        />
-        <div
-          className="absolute h-[380px] w-[380px] rounded-full border border-purple-500/25 blur-[1px]"
-          style={{ animation: "orb-pulse-ring 3s ease-out infinite 1.5s" }}
-        />
-        {/* Intense Ambient Glow Core */}
-        <div
-          className="h-[320px] w-[320px] rounded-full opacity-40 blur-[100px]"
-          style={{
-            background:
-              "radial-gradient(circle, #8B5CF6 0%, #22D3EE 60%, transparent 80%)",
-          }}
-        />
-      </div>
+    <section id="cta" className="relative py-20 px-4 sm:px-6">
+      <div className="mx-auto max-w-4xl">
+        <div className="relative overflow-hidden rounded-3xl border border-white/10 bg-slate-900/60 p-8 sm:p-12 text-center backdrop-blur-xl shadow-2xl">
+          {/* Subtle interior glow */}
+          <div className="pointer-events-none absolute -top-24 left-1/2 -translate-x-1/2 h-48 w-80 rounded-full bg-cyan-500/10 blur-3xl" />
 
-      <div className="relative mx-auto max-w-4xl">
-        <div
-          className="relative overflow-hidden rounded-3xl p-8 sm:p-14 text-center transition-all duration-300"
-          style={{
-            background: "rgba(14, 14, 28, 0.7)",
-            backdropFilter: "blur(24px)",
-            WebkitBackdropFilter: "blur(24px)",
-            border: "1px solid rgba(255, 255, 255, 0.12)",
-            boxShadow:
-              "0 30px 80px -20px rgba(0, 0, 0, 0.8), 0 0 50px rgba(139, 92, 246, 0.2)",
-          }}
-        >
-          {/* Subtle Accent Glow inside Card */}
-          <div className="pointer-events-none absolute -top-24 left-1/2 -translate-x-1/2 h-48 w-96 rounded-full bg-cyan-400/20 blur-3xl" />
-
-          {/* Badge */}
-          <div className="inline-flex items-center gap-2 rounded-full border border-purple-500/30 bg-purple-500/10 px-4 py-1.5 text-xs font-medium text-purple-300">
-            <Sparkles size={13} className="text-cyan-400" />
-            <span>START PRACTICING TODAY</span>
-          </div>
-
-          {/* Headline */}
+          {/* Heading */}
           <h2
-            className="mt-6 text-3xl sm:text-5xl font-extrabold tracking-tight text-white"
+            className="text-3xl sm:text-4xl font-extrabold tracking-tight text-white max-w-xl mx-auto"
             style={{ fontFamily: "var(--font-heading)" }}
           >
-            Ready to master your next interview?
+            Ready to Prepare for Your Next Interview?
           </h2>
 
-          {/* Subtext */}
-          <p className="mx-auto mt-4 max-w-xl text-base sm:text-lg text-white/70 leading-relaxed">
-            Start practicing with Veya today. Build confidence with realistic voice simulations, instant scoring, and personalized feedback.
+          {/* Subtitle */}
+          <p className="mt-3.5 text-sm sm:text-base text-slate-300 max-w-lg mx-auto leading-relaxed">
+            Start practicing with Veya today. Build confidence with realistic voice simulations, role-specific questions, and actionable feedback.
           </p>
 
           {/* Action Buttons */}
-          <div className="mt-9 flex flex-col sm:flex-row items-center justify-center gap-4">
+          <div className="mt-8 flex flex-col sm:flex-row items-center justify-center gap-3.5">
             <button
+              type="button"
               onClick={onStartInterview}
-              className="group relative inline-flex w-full sm:w-auto items-center justify-center overflow-hidden rounded-full px-8 py-4 text-sm font-semibold text-white shadow-2xl transition-all duration-300 hover:scale-105 active:scale-95"
+              className="group relative inline-flex w-full sm:w-auto items-center justify-center gap-2 rounded-full px-7 py-3.5 text-sm font-semibold text-white shadow-xl transition-all duration-200 hover:scale-[1.02] active:scale-[0.98] cursor-pointer focus:outline-none focus-visible:ring-2 focus-visible:ring-cyan-400"
               style={{
-                background: "linear-gradient(135deg, #3B82F6 0%, #8B5CF6 50%, #22D3EE 100%)",
-                boxShadow: "0 8px 30px -4px rgba(139, 92, 246, 0.6)",
+                background: "linear-gradient(135deg, #2563EB 0%, #7C3AED 50%, #06B6D4 100%)",
+                boxShadow: "0 4px 20px -2px rgba(37, 99, 235, 0.4)",
               }}
             >
-              {/* Shine beam sweep */}
-              <span className="absolute inset-0 -translate-x-full bg-gradient-to-r from-transparent via-white/30 to-transparent group-hover:animate-[shine-sweep_1s_ease-in-out]" />
-              <span className="relative flex items-center gap-2 font-bold tracking-wide">
-                Start Interview
-                <ArrowRight size={16} className="transition-transform group-hover:translate-x-1" />
-              </span>
+              <span>Start an Interview</span>
+              <ArrowRight size={16} className="transition-transform group-hover:translate-x-1" />
             </button>
 
             <button
+              type="button"
               onClick={onTalkToVeya}
-              className="inline-flex w-full sm:w-auto items-center justify-center gap-2 rounded-full px-7 py-4 text-sm font-medium text-white/90 border border-white/15 bg-white/[0.04] backdrop-blur-md hover:bg-white/[0.08] hover:border-cyan-400/40 hover:text-white transition-all duration-200"
+              className="inline-flex w-full sm:w-auto items-center justify-center gap-2 rounded-full px-6 py-3.5 text-sm font-medium text-white/90 border border-white/15 bg-white/[0.04] backdrop-blur-sm hover:bg-white/[0.08] hover:border-cyan-400/40 hover:text-white transition-all cursor-pointer focus:outline-none focus-visible:ring-2 focus-visible:ring-cyan-400"
             >
               <Mic size={16} className="text-cyan-400" />
-              Talk to Veya
+              <span>Talk to Veya</span>
             </button>
           </div>
 
-          {/* Trust Guarantees */}
-          <div className="mt-10 flex flex-wrap items-center justify-center gap-6 pt-6 border-t border-white/10 text-xs text-white/50">
+          {/* Assurances */}
+          <div className="mt-8 flex flex-wrap items-center justify-center gap-5 pt-6 border-t border-white/10 text-xs text-slate-400">
             <span className="flex items-center gap-1.5">
-              <Zap size={14} className="text-cyan-400" />
-              No setup required
+              <CheckCircle2 size={13} className="text-cyan-400" />
+              Instant browser access
             </span>
             <span className="flex items-center gap-1.5">
-              <Headphones size={14} className="text-purple-400" />
+              <CheckCircle2 size={13} className="text-cyan-400" />
               Real-time voice feedback
             </span>
             <span className="flex items-center gap-1.5">
-              <ShieldCheck size={14} className="text-emerald-400" />
-              Private & secure sessions
+              <CheckCircle2 size={13} className="text-cyan-400" />
+              Private interview sessions
             </span>
           </div>
         </div>

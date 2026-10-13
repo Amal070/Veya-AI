@@ -1,51 +1,51 @@
 import React from "react";
-import { Mic, Sparkles, Heart } from "lucide-react";
 
 /**
- * Footer — Clean, minimal tech footer with Veya AI branding.
+ * Footer — Clean, minimal production footer.
+ * Contains brand logo, essential navigation links, and copyright.
  */
 export default function Footer() {
   return (
-    <footer className="relative border-t border-white/10 bg-[#070711] py-12 px-6">
-      <div className="mx-auto flex max-w-6xl flex-col sm:flex-row items-center justify-between gap-6">
+    <footer className="relative border-t border-white/10 bg-[#070711] py-8 px-4 sm:px-6">
+      <div className="mx-auto flex max-w-6xl flex-col sm:flex-row items-center justify-between gap-4">
         {/* Brand identity */}
         <div className="flex items-center gap-3">
           <img
             src="/logo.png"
             alt="Veya AI"
-            className="h-8 w-8 rounded-full object-cover ring-1 ring-white/20"
+            className="h-7 w-7 rounded-full object-cover ring-1 ring-white/20"
           />
-          <div className="flex flex-col">
+          <div className="flex items-center gap-2">
             <span
-              className="text-base font-bold text-white tracking-tight"
+              className="text-sm font-bold text-white tracking-tight"
               style={{ fontFamily: "var(--font-display)" }}
             >
               Veya AI
             </span>
-            <span className="text-[11px] text-white/50">
-              Next-Gen Voice Assistant & Interview Coach
+            <span className="text-xs text-slate-400">
+              — AI Interview Preparation Platform
             </span>
           </div>
         </div>
 
-        {/* Links */}
-        <div className="flex items-center gap-6 text-xs text-white/60">
+        {/* Essential Navigation Links */}
+        <nav className="flex items-center gap-5 text-xs text-slate-400" aria-label="Footer Navigation">
           <a href="#hero" className="hover:text-cyan-300 transition-colors">
             Home
           </a>
           <a href="#features" className="hover:text-cyan-300 transition-colors">
             Features
           </a>
-          <a href="#experience" className="hover:text-cyan-300 transition-colors">
-            Experience
+          <a href="#how-it-works" className="hover:text-cyan-300 transition-colors">
+            How It Works
           </a>
           <a href="/interview" className="hover:text-cyan-300 transition-colors">
             Interview Studio
           </a>
-        </div>
+        </nav>
 
         {/* Copyright */}
-        <div className="text-xs text-white/40">
+        <div className="text-xs text-slate-500">
           © {new Date().getFullYear()} Veya AI. All rights reserved.
         </div>
       </div>

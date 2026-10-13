@@ -1,9 +1,9 @@
 import React, { useState, useEffect } from "react";
-import { Mic, ArrowRight, Menu, X, Sparkles } from "lucide-react";
+import { Mic, ArrowRight, Menu, X } from "lucide-react";
 
 /**
- * Navbar — Minimal premium glassmorphic navigation bar.
- * Becomes more opaque and elevated on scroll.
+ * Navbar — Compact, responsive, accessible production navigation bar.
+ * Connects directly to existing routes and modal triggers.
  */
 export default function Navbar({ onStartInterview, onTalkToVeya }) {
   const [isScrolled, setIsScrolled] = useState(false);
@@ -11,7 +11,7 @@ export default function Navbar({ onStartInterview, onTalkToVeya }) {
 
   useEffect(() => {
     const handleScroll = () => {
-      setIsScrolled(window.scrollY > 24);
+      setIsScrolled(window.scrollY > 20);
     };
     window.addEventListener("scroll", handleScroll, { passive: true });
     return () => window.removeEventListener("scroll", handleScroll);
@@ -20,79 +20,82 @@ export default function Navbar({ onStartInterview, onTalkToVeya }) {
   const navLinks = [
     { label: "Home", href: "#hero" },
     { label: "Features", href: "#features" },
-    { label: "Experience", href: "#experience" },
-    { label: "Interview Studio", href: "/interview" },
+    { label: "How It Works", href: "#how-it-works" },
+    { label: "Interview Studio", href: "/interview", isRoute: true },
   ];
 
   return (
     <header
-      className={`fixed top-0 left-0 right-0 z-50 transition-all duration-300 ${
+      className={`fixed top-0 left-0 right-0 z-50 transition-all duration-200 ${
         isScrolled
-          ? "bg-[#070711]/85 backdrop-blur-xl border-b border-white/10 py-3 shadow-2xl shadow-black/50"
-          : "bg-transparent backdrop-blur-[2px] border-b border-transparent py-5"
+          ? "bg-[#070711]/90 backdrop-blur-xl border-b border-white/10 py-3 shadow-lg shadow-black/40"
+          : "bg-[#070711]/40 backdrop-blur-md border-b border-white/5 py-4"
       }`}
     >
-      <div className="mx-auto flex max-w-6xl items-center justify-between px-6">
-        {/* Left: Brand Identity */}
+      <div className="mx-auto flex max-w-6xl items-center justify-between px-4 sm:px-6">
+        {/* Brand Identity */}
         <a
           href="#hero"
-          className="group flex items-center gap-3 transition-transform duration-300 hover:scale-[1.02]"
+          className="flex items-center gap-3 group focus:outline-none focus-visible:ring-2 focus-visible:ring-cyan-400 rounded-lg p-1"
         >
           <div className="relative flex items-center justify-center">
-            <div className="absolute -inset-1 rounded-full bg-gradient-to-r from-purple-600 to-cyan-400 opacity-60 blur-sm group-hover:opacity-90 transition-opacity" />
             <img
               src="/logo.png"
-              alt="Veya AI"
-              className="relative h-9 w-9 rounded-full object-cover ring-1 ring-white/20"
+              alt="Veya AI logo"
+              className="h-8 w-8 rounded-full object-cover ring-1 ring-white/20 group-hover:ring-cyan-400/50 transition-all"
             />
           </div>
-          <div className="flex flex-col">
+          <div className="flex items-center gap-2">
             <span
-              className="text-lg font-bold tracking-tight text-white"
+              className="text-base font-bold tracking-tight text-white group-hover:text-cyan-200 transition-colors"
               style={{ fontFamily: "var(--font-display)" }}
             >
               Veya AI
             </span>
+            <span className="hidden sm:inline-block rounded-full bg-cyan-500/10 px-2 py-0.5 text-[10px] font-medium text-cyan-300 border border-cyan-500/20">
+              SaaS Coach
+            </span>
           </div>
         </a>
 
-        {/* Center: Nav Anchors (Desktop) */}
-        <nav className="hidden md:flex items-center gap-8 rounded-full px-6 py-2 border border-white/5 bg-white/[0.02] backdrop-blur-md">
+        {/* Desktop Navigation Links */}
+        <nav
+          className="hidden md:flex items-center gap-1 rounded-full px-4 py-1.5 border border-white/10 bg-white/[0.03] backdrop-blur-md"
+          aria-label="Main Navigation"
+        >
           {navLinks.map((link) => (
             <a
               key={link.label}
               href={link.href}
-              className="text-sm font-medium text-white/70 transition-colors duration-200 hover:text-cyan-300"
+              className="px-3.5 py-1.5 text-xs font-medium text-white/70 hover:text-white hover:bg-white/[0.06] rounded-full transition-all focus:outline-none focus-visible:ring-2 focus-visible:ring-cyan-400"
             >
               {link.label}
             </a>
           ))}
         </nav>
 
-        {/* Right: Action Buttons (Desktop) */}
+        {/* Desktop CTAs */}
         <div className="hidden md:flex items-center gap-3">
           <button
+            type="button"
             onClick={onTalkToVeya}
-            className="flex items-center gap-1.5 rounded-full px-4 py-2 text-xs font-medium text-white/80 border border-white/10 hover:border-cyan-400/40 hover:text-white transition-all duration-200 hover:bg-white/[0.04]"
+            className="flex items-center gap-1.5 rounded-full px-3.5 py-1.5 text-xs font-medium text-white/80 border border-white/15 bg-white/[0.03] hover:bg-white/[0.08] hover:text-white hover:border-cyan-400/40 transition-all cursor-pointer focus:outline-none focus-visible:ring-2 focus-visible:ring-cyan-400"
           >
             <Mic size={13} className="text-cyan-400" />
-            Talk to Veya
+            <span>Talk to Veya</span>
           </button>
 
           <button
+            type="button"
             onClick={onStartInterview}
-            className="group relative inline-flex items-center justify-center overflow-hidden rounded-full px-5 py-2 text-xs font-semibold text-white shadow-lg transition-all duration-300 hover:scale-105 active:scale-95"
+            className="group relative inline-flex items-center justify-center rounded-full px-4 py-1.5 text-xs font-semibold text-white shadow-md transition-all hover:opacity-95 active:scale-95 cursor-pointer focus:outline-none focus-visible:ring-2 focus-visible:ring-cyan-400"
             style={{
-              background: "linear-gradient(135deg, #3B82F6 0%, #8B5CF6 50%, #22D3EE 100%)",
-              boxShadow: "0 4px 20px -4px rgba(139, 92, 246, 0.5)",
+              background: "linear-gradient(135deg, #2563EB 0%, #7C3AED 60%, #06B6D4 100%)",
+              boxShadow: "0 2px 14px -2px rgba(37, 99, 235, 0.4)",
             }}
           >
-            {/* Animated shine beam */}
-            <span
-              className="absolute inset-0 -translate-x-full bg-gradient-to-r from-transparent via-white/25 to-transparent group-hover:animate-[shine-sweep_1s_ease-in-out]"
-            />
-            <span className="relative flex items-center gap-1.5">
-              Start Interview
+            <span className="flex items-center gap-1.5">
+              <span>Start Interview</span>
               <ArrowRight size={13} className="transition-transform group-hover:translate-x-0.5" />
             </span>
           </button>
@@ -100,50 +103,55 @@ export default function Navbar({ onStartInterview, onTalkToVeya }) {
 
         {/* Mobile Hamburger Toggle */}
         <button
+          type="button"
           onClick={() => setMobileMenuOpen(!mobileMenuOpen)}
-          className="md:hidden flex items-center justify-center p-2 rounded-lg text-white/80 hover:text-white border border-white/10"
-          aria-label="Toggle Navigation"
+          className="md:hidden flex items-center justify-center p-2 rounded-lg text-white/80 hover:text-white hover:bg-white/10 border border-white/10 focus:outline-none focus-visible:ring-2 focus-visible:ring-cyan-400 cursor-pointer"
+          aria-expanded={mobileMenuOpen}
+          aria-label={mobileMenuOpen ? "Close navigation menu" : "Open navigation menu"}
         >
-          {mobileMenuOpen ? <X size={20} /> : <Menu size={20} />}
+          {mobileMenuOpen ? <X size={18} /> : <Menu size={18} />}
         </button>
       </div>
 
-      {/* Mobile Drawer */}
+      {/* Mobile Drawer Menu */}
       {mobileMenuOpen && (
-        <div className="md:hidden border-b border-white/10 bg-[#070711]/95 px-6 py-5 backdrop-blur-2xl">
-          <nav className="flex flex-col gap-4">
+        <div className="md:hidden border-b border-white/10 bg-[#070711]/95 px-5 py-5 backdrop-blur-2xl">
+          <nav className="flex flex-col gap-2" aria-label="Mobile Navigation">
             {navLinks.map((link) => (
               <a
                 key={link.label}
                 href={link.href}
                 onClick={() => setMobileMenuOpen(false)}
-                className="text-base font-medium text-white/80 hover:text-cyan-300 transition-colors"
+                className="px-3 py-2 rounded-lg text-sm font-medium text-white/80 hover:text-white hover:bg-white/[0.06] transition-colors"
               >
                 {link.label}
               </a>
             ))}
-            <div className="flex flex-col gap-2.5 pt-4 border-t border-white/10">
+            <div className="flex flex-col gap-2.5 pt-4 mt-2 border-t border-white/10">
               <button
+                type="button"
                 onClick={() => {
                   setMobileMenuOpen(false);
                   onTalkToVeya();
                 }}
-                className="flex items-center justify-center gap-2 rounded-xl py-2.5 text-sm font-medium text-white/90 border border-white/10"
+                className="flex items-center justify-center gap-2 rounded-xl py-2.5 text-xs font-medium text-white/90 border border-white/15 bg-white/[0.04] hover:bg-white/[0.08] transition-colors cursor-pointer"
               >
                 <Mic size={14} className="text-cyan-400" />
-                Talk to Veya
+                <span>Talk to Veya</span>
               </button>
+
               <button
+                type="button"
                 onClick={() => {
                   setMobileMenuOpen(false);
                   onStartInterview();
                 }}
-                className="flex items-center justify-center gap-2 rounded-xl py-2.5 text-sm font-semibold text-white"
+                className="flex items-center justify-center gap-2 rounded-xl py-2.5 text-xs font-semibold text-white shadow-md transition-opacity hover:opacity-95 cursor-pointer"
                 style={{
-                  background: "linear-gradient(135deg, #8B5CF6, #22D3EE)",
+                  background: "linear-gradient(135deg, #2563EB, #7C3AED)",
                 }}
               >
-                Start Interview
+                <span>Start Interview</span>
                 <ArrowRight size={14} />
               </button>
             </div>

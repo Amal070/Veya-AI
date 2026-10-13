@@ -18,6 +18,7 @@ import BackgroundFX from "../components/landing/BackgroundFX";
 import Navbar from "../components/landing/Navbar";
 import HeroSection from "../components/landing/HeroSection";
 import FeatureCards from "../components/landing/FeatureCards";
+import HowItWorks from "../components/landing/HowItWorks";
 import InterviewExperience from "../components/landing/InterviewExperience";
 import CtaSection from "../components/landing/CtaSection";
 import Footer from "../components/landing/Footer";
@@ -55,8 +56,9 @@ export default function Home() {
             onStartInterview={handleStartInterview}
             onTalkToVeya={handleTalkToVeya}
           />
-          <FeatureCards onStartInterview={handleStartInterview} />
-          <InterviewExperience onStartInterview={handleStartInterview} />
+          <FeatureCards />
+          <HowItWorks />
+          <InterviewExperience />
           <CtaSection
             onStartInterview={handleStartInterview}
             onTalkToVeya={handleTalkToVeya}
