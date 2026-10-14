@@ -1,20 +1,15 @@
 import { useState, useRef } from "react";
-import { Link, useNavigate } from "react-router-dom";
+import { Link } from "react-router-dom";
 import {
   ArrowLeft,
   ArrowRight,
-  Bot,
   Gauge,
   Layers,
   FileText,
   Upload,
   Sparkles,
-  CheckCircle2,
   Loader2,
   X,
-  Volume2,
-  SkipForward,
-  LogOut,
 } from "lucide-react";
 
 import VoiceOrb from "../components/VoiceOrb";
@@ -39,13 +34,12 @@ const DIFFICULTIES = [
 const QUESTION_PRESETS = [5, 10, 15];
 
 /**
- * Interview — The dedicated, futuristic Veya AI Mock Interview Studio.
- * Allows instant configuration (difficulty, question count, resume upload)
- * and seamless real-time spoken voice interview execution.
+ * Interview — The professional Veya AI Mock Interview Studio.
+ * Provides pre-interview configuration (difficulty, question count, resume upload)
+ * and seamless real-time voice interview execution.
  */
 export default function Interview() {
   const mm = useVeya();
-  const navigate = useNavigate();
 
   // Pre-interview studio configuration state
   const [selectedDifficulty, setSelectedDifficulty] = useState(mm.difficulty || "medium");
@@ -65,6 +59,17 @@ export default function Interview() {
 
   const displayError = mm.micPermissionError || mm.error || uploadError;
   const isInterviewActive = mm.mode === "interview" && mm.currentQuestion && mm.state !== "finished";
+
+  // Derive assistant status message directly from application state
+  const assistantStatusLabel = mm.micPermissionError
+    ? "Microphone unavailable"
+    : mm.state === "listening"
+    ? "Listening..."
+    : mm.state === "thinking" || mm.isSkipping
+    ? "Processing your answer..."
+    : mm.state === "speaking"
+    ? "Generating the next question..."
+    : "Ready to answer";
 
   const handleFileChange = (e) => {
     const file = e.target.files?.[0];
@@ -119,19 +124,20 @@ export default function Interview() {
     <div className="relative min-h-screen text-white selection:bg-cyan-500 selection:text-black">
       <BackgroundFX />
 
-      {/* Top Studio Navigation Bar */}
-      <header className="fixed top-0 left-0 right-0 z-40 bg-[#070711]/80 backdrop-blur-xl border-b border-white/10 py-3.5 px-6">
-        <div className="mx-auto flex max-w-6xl items-center justify-between">
+      {/* Top Studio Header */}
+      <header className="fixed top-0 left-0 right-0 z-40 bg-[#070711]/90 backdrop-blur-xl border-b border-white/10 py-2.5 px-4 sm:px-6 shadow-sm">
+        <div className="mx-auto flex max-w-5xl items-center justify-between">
+          {/* Logo & Studio Identifier */}
           <Link
             to="/"
-            className="group flex items-center gap-3 transition-transform hover:scale-[1.02]"
+            className="group flex items-center gap-2.5 rounded-lg focus:outline-none focus-visible:ring-2 focus-visible:ring-cyan-400 p-1 transition-transform hover:scale-[1.01]"
+            aria-label="Veya AI Mock Interview Studio - Back to Home"
           >
             <div className="relative flex items-center justify-center">
-              <div className="absolute -inset-1 rounded-full bg-gradient-to-r from-purple-600 to-cyan-400 opacity-60 blur-xs group-hover:opacity-90 transition-opacity" />
               <img
                 src="/logo.png"
-                alt="Veya AI"
-                className="relative h-8 w-8 rounded-full object-cover ring-1 ring-white/20"
+                alt="Veya AI logo"
+                className="h-7 w-7 rounded-full object-cover ring-1 ring-white/20 group-hover:ring-cyan-400/50 transition-all"
               />
             </div>
             <div className="flex items-center gap-2">
@@ -141,13 +147,14 @@ export default function Interview() {
               >
                 Veya AI
               </span>
-              <span className="rounded-full bg-purple-500/10 px-2 py-0.5 text-[10px] font-mono text-purple-300 border border-purple-500/20">
-                STUDIO
+              <span className="rounded-full bg-cyan-500/10 px-2 py-0.5 text-[10px] font-mono text-cyan-300 border border-cyan-500/20">
+                Mock Interview Studio
               </span>
             </div>
           </Link>
 
-          <div className="flex items-center gap-3">
+          {/* Navigation & Active Session Status */}
+          <div className="flex items-center gap-2.5">
             {isInterviewActive && (
               <span className="hidden sm:inline-flex items-center gap-1.5 rounded-full bg-emerald-500/10 px-2.5 py-1 text-xs font-mono text-emerald-400 border border-emerald-500/20">
                 <span className="h-1.5 w-1.5 rounded-full bg-emerald-400 animate-pulse" />
@@ -157,7 +164,7 @@ export default function Interview() {
 
             <Link
               to="/"
-              className="flex items-center gap-1.5 rounded-full px-3.5 py-1.5 text-xs font-medium text-white/70 border border-white/10 bg-white/[0.03] hover:bg-white/[0.08] hover:text-white transition-all"
+              className="flex items-center gap-1.5 rounded-full px-3.5 py-1.5 text-xs font-medium text-white/70 border border-white/10 bg-white/[0.03] hover:bg-white/[0.08] hover:text-white hover:border-cyan-400/30 focus:outline-none focus-visible:ring-2 focus-visible:ring-cyan-400 transition-all cursor-pointer"
             >
               <ArrowLeft size={13} />
               <span>Back to Home</span>
@@ -167,9 +174,9 @@ export default function Interview() {
       </header>
 
       {/* Main Studio Content Area */}
-      <main className="pt-24 pb-20 px-4 sm:px-6">
+      <main className="pt-20 sm:pt-22 pb-16 px-4 sm:px-6">
         {displayError && (
-          <div className="mx-auto max-w-xl mb-6">
+          <div className="mx-auto max-w-2xl mb-4">
             <ErrorBanner
               message={displayError}
               onRetry={mm.error ? mm.dismissError : () => setUploadError(null)}
@@ -179,60 +186,56 @@ export default function Interview() {
 
         {/* State A: Pre-Interview Studio Configuration Cockpit */}
         {!isInterviewActive && (
-          <div className="mx-auto max-w-2xl text-center" style={{ animation: "fade-up 0.5s ease-out" }}>
-            {/* Center Mascot & Title */}
-            <div className="relative inline-flex items-center justify-center my-6">
+          <div className="mx-auto max-w-2xl text-center" style={{ animation: "fade-up 0.4s ease-out" }}>
+            {/* Mascot Avatar & Title */}
+            <div className="relative inline-flex items-center justify-center my-4">
               <div
-                className="absolute -inset-4 rounded-full blur-2xl opacity-60"
+                className="absolute -inset-2 rounded-full blur-xl opacity-40 pointer-events-none"
                 style={{
                   background:
-                    "radial-gradient(circle, rgba(139,92,246,0.65) 0%, rgba(34,211,238,0.45) 70%, transparent 100%)",
+                    "radial-gradient(circle, rgba(139,92,246,0.6) 0%, rgba(34,211,238,0.3) 70%, transparent 100%)",
                 }}
               />
               <img
                 src="/logo.png"
-                alt="Veya AI"
-                className="relative h-28 w-28 rounded-full object-cover shadow-2xl ring-2 ring-purple-400/25 transition-transform duration-500 hover:scale-105"
-                style={{
-                  boxShadow:
-                    "0 12px 36px -6px rgba(139,92,246,0.5), 0 0 24px rgba(34,211,238,0.3)",
-                }}
+                alt="Veya AI Interview Coach"
+                className="relative h-18 w-18 rounded-full object-cover ring-2 ring-purple-400/25 shadow-xl transition-transform hover:scale-105"
               />
             </div>
 
-            <div className="space-y-2">
-              <div className="inline-flex items-center gap-2 rounded-full border border-cyan-400/30 bg-cyan-950/40 px-3.5 py-1 text-xs font-medium text-cyan-300">
-                <Sparkles size={12} className="text-cyan-400" />
-                <span>VOICE INTERVIEW COCKPIT</span>
+            <div className="space-y-1.5">
+              <div className="inline-flex items-center gap-1.5 rounded-full border border-cyan-400/25 bg-cyan-950/40 px-3 py-0.5 text-xs font-medium text-cyan-300">
+                <Sparkles size={11} className="text-cyan-400" />
+                <span>INTERVIEW STUDIO CONFIGURATION</span>
               </div>
               <h1
-                className="text-3xl sm:text-4xl font-extrabold tracking-tight text-white"
+                className="text-2xl sm:text-3xl font-extrabold tracking-tight text-white"
                 style={{ fontFamily: "var(--font-heading)" }}
               >
-                <span className="text-gradient-electric">Veya Interview Studio</span>
+                <span className="text-gradient-electric">Mock Interview Studio</span>
               </h1>
-              <p className="mx-auto max-w-md text-sm text-white/60 leading-relaxed">
-                Configure your target parameters, optionally attach your resume for tailored technical questions, and practice with real-time AI speech feedback.
+              <p className="mx-auto max-w-md text-xs sm:text-sm text-white/60 leading-relaxed">
+                Configure your interview parameters, optionally attach your resume for tailored questions, and practice with real-time AI speech feedback.
               </p>
             </div>
 
             {/* Studio Settings Card */}
             <div
-              className="mt-8 rounded-3xl p-6 sm:p-8 text-left transition-all duration-300"
+              className="mt-6 rounded-2xl p-5 sm:p-7 text-left transition-all duration-300"
               style={{
-                background: "rgba(14, 14, 28, 0.75)",
+                background: "rgba(11, 11, 22, 0.75)",
                 backdropFilter: "blur(20px)",
-                border: "1px solid rgba(255, 255, 255, 0.1)",
-                boxShadow: "0 20px 50px -10px rgba(0, 0, 0, 0.7), 0 0 30px rgba(139, 92, 246, 0.15)",
+                border: "1px solid rgba(255, 255, 255, 0.08)",
+                boxShadow: "0 16px 40px -10px rgba(0, 0, 0, 0.6), 0 0 20px rgba(139, 92, 246, 0.08)",
               }}
             >
               {/* Parameter 1: Difficulty Level */}
               <div>
-                <label className="flex items-center gap-2 text-xs font-semibold uppercase tracking-wider text-white/70 mb-3">
-                  <Gauge size={14} className="text-cyan-400" />
-                  1. Select Difficulty Level
+                <label className="flex items-center gap-2 text-xs font-semibold uppercase tracking-wider text-white/80 mb-2.5">
+                  <Gauge size={13} className="text-cyan-400" />
+                  1. Difficulty Level
                 </label>
-                <div className="grid grid-cols-1 sm:grid-cols-3 gap-3">
+                <div className="grid grid-cols-1 sm:grid-cols-3 gap-2.5">
                   {DIFFICULTIES.map((d) => {
                     const isSelected = selectedDifficulty === d.value;
                     return (
@@ -240,16 +243,16 @@ export default function Interview() {
                         key={d.value}
                         type="button"
                         onClick={() => setSelectedDifficulty(d.value)}
-                        className={`flex flex-col rounded-xl p-3.5 text-left transition-all duration-200 cursor-pointer ${
+                        className={`flex flex-col rounded-xl p-3 text-left transition-all duration-200 cursor-pointer focus:outline-none focus-visible:ring-2 focus-visible:ring-cyan-400 ${
                           isSelected
-                            ? "bg-purple-900/30 border border-cyan-400/60 shadow-[0_0_15px_rgba(34,211,238,0.2)]"
+                            ? "bg-purple-900/30 border border-cyan-400/50 shadow-[0_0_12px_rgba(34,211,238,0.15)]"
                             : "bg-white/[0.03] border border-white/10 hover:border-white/20 hover:bg-white/[0.05]"
                         }`}
                       >
-                        <span className={`text-sm font-bold ${isSelected ? "text-cyan-300" : "text-white"}`}>
+                        <span className={`text-xs font-bold ${isSelected ? "text-cyan-300" : "text-white"}`}>
                           {d.label}
                         </span>
-                        <span className="text-[11px] text-white/50 mt-1 leading-tight">
+                        <span className="text-[10px] text-white/50 mt-0.5 leading-tight">
                           {d.desc}
                         </span>
                       </button>
@@ -259,12 +262,12 @@ export default function Interview() {
               </div>
 
               {/* Parameter 2: Question Count */}
-              <div className="mt-6 pt-6 border-t border-white/10">
-                <label className="flex items-center gap-2 text-xs font-semibold uppercase tracking-wider text-white/70 mb-3">
-                  <Layers size={14} className="text-purple-400" />
+              <div className="mt-5 pt-5 border-t border-white/10">
+                <label className="flex items-center gap-2 text-xs font-semibold uppercase tracking-wider text-white/80 mb-2.5">
+                  <Layers size={13} className="text-purple-400" />
                   2. Number of Questions
                 </label>
-                <div className="grid grid-cols-2 sm:grid-cols-4 gap-2.5">
+                <div className="grid grid-cols-2 sm:grid-cols-4 gap-2">
                   {QUESTION_PRESETS.map((count) => {
                     const isSelected = selectedPreset === count;
                     return (
@@ -272,9 +275,9 @@ export default function Interview() {
                         key={count}
                         type="button"
                         onClick={() => setSelectedPreset(count)}
-                        className={`rounded-xl py-2.5 text-center text-sm font-semibold transition-all duration-200 cursor-pointer ${
+                        className={`rounded-xl py-2 text-center text-xs font-semibold transition-all duration-200 cursor-pointer focus:outline-none focus-visible:ring-2 focus-visible:ring-cyan-400 ${
                           isSelected
-                            ? "bg-gradient-to-r from-purple-600/40 to-cyan-500/40 border border-cyan-400/60 text-white shadow-[0_0_15px_rgba(34,211,238,0.2)]"
+                            ? "bg-gradient-to-r from-purple-600/40 to-cyan-500/40 border border-cyan-400/50 text-white shadow-[0_0_12px_rgba(34,211,238,0.15)]"
                             : "bg-white/[0.03] border border-white/10 text-white/70 hover:border-white/20 hover:text-white"
                         }`}
                       >
@@ -285,9 +288,9 @@ export default function Interview() {
                   <button
                     type="button"
                     onClick={() => setSelectedPreset("custom")}
-                    className={`rounded-xl py-2.5 text-center text-sm font-semibold transition-all duration-200 cursor-pointer ${
+                    className={`rounded-xl py-2 text-center text-xs font-semibold transition-all duration-200 cursor-pointer focus:outline-none focus-visible:ring-2 focus-visible:ring-cyan-400 ${
                       selectedPreset === "custom"
-                        ? "bg-gradient-to-r from-purple-600/40 to-cyan-500/40 border border-cyan-400/60 text-white shadow-[0_0_15px_rgba(34,211,238,0.2)]"
+                        ? "bg-gradient-to-r from-purple-600/40 to-cyan-500/40 border border-cyan-400/50 text-white shadow-[0_0_12px_rgba(34,211,238,0.15)]"
                         : "bg-white/[0.03] border border-white/10 text-white/70 hover:border-white/20 hover:text-white"
                     }`}
                   >
@@ -296,44 +299,44 @@ export default function Interview() {
                 </div>
 
                 {selectedPreset === "custom" && (
-                  <div className="mt-3">
+                  <div className="mt-2.5">
                     <input
                       type="number"
                       min={1}
                       max={15}
                       value={customCount}
                       onChange={(e) => setCustomCount(e.target.value)}
-                      placeholder="Enter custom count (1–15 questions)"
-                      className="w-full rounded-xl px-4 py-2.5 text-sm outline-none bg-white/[0.04] border border-cyan-400/50 text-white placeholder:text-white/40 focus:border-cyan-400 shadow-[0_0_12px_rgba(34,211,238,0.15)]"
+                      placeholder="Enter question count (1–15)"
+                      className="w-full rounded-xl px-3.5 py-2 text-xs outline-none bg-white/[0.04] border border-cyan-400/50 text-white placeholder:text-white/40 focus:ring-1 focus:ring-cyan-400"
                     />
                   </div>
                 )}
               </div>
 
               {/* Optional Job Role */}
-              <div className="mt-6 pt-6 border-t border-white/10">
-                <label className="flex items-center gap-2 text-xs font-semibold uppercase tracking-wider text-white/70 mb-2">
-                  <Sparkles size={14} className="text-cyan-400" />
+              <div className="mt-5 pt-5 border-t border-white/10">
+                <label className="flex items-center gap-2 text-xs font-semibold uppercase tracking-wider text-white/80 mb-2">
+                  <Sparkles size={13} className="text-cyan-400" />
                   Target Job Role (Optional)
                 </label>
                 <input
                   type="text"
                   value={targetJobRole}
                   onChange={(e) => setTargetJobRole(e.target.value)}
-                  placeholder="e.g. Full Stack Developer, Python Backend Engineer"
-                  className="w-full rounded-xl px-4 py-2.5 text-sm outline-none bg-white/[0.03] border border-white/10 text-white placeholder:text-white/35 focus:border-cyan-400/60 transition-colors"
+                  placeholder="e.g. Senior Frontend Engineer, Full Stack Developer"
+                  className="w-full rounded-xl px-3.5 py-2 text-xs outline-none bg-white/[0.03] border border-white/10 text-white placeholder:text-white/35 focus:border-cyan-400/60 focus:ring-1 focus:ring-cyan-400/40 transition-colors"
                 />
               </div>
 
               {/* Parameter 3: Optional Resume Upload */}
-              <div className="mt-6 pt-6 border-t border-white/10">
-                <label className="flex items-center justify-between text-xs font-semibold uppercase tracking-wider text-white/70 mb-3">
+              <div className="mt-5 pt-5 border-t border-white/10">
+                <div className="flex items-center justify-between text-xs font-semibold uppercase tracking-wider text-white/80 mb-2.5">
                   <span className="flex items-center gap-2">
-                    <FileText size={14} className="text-emerald-400" />
+                    <FileText size={13} className="text-emerald-400" />
                     3. Resume for Tailored Questions (Optional)
                   </span>
                   <span className="text-[10px] text-white/40 font-normal">PDF, DOCX, TXT • Max 5MB</span>
-                </label>
+                </div>
 
                 <input
                   type="file"
@@ -344,26 +347,27 @@ export default function Interview() {
                 />
 
                 {!resumeFile ? (
-                  <div
+                  <button
+                    type="button"
                     onClick={() => fileInputRef.current?.click()}
-                    className="flex flex-col items-center justify-center rounded-2xl border-2 border-dashed border-white/15 bg-white/[0.02] p-5 text-center transition-colors hover:border-cyan-400/40 hover:bg-white/[0.04] cursor-pointer"
+                    className="w-full flex flex-col items-center justify-center rounded-xl border border-dashed border-white/15 bg-white/[0.02] p-4 text-center transition-colors hover:border-cyan-400/40 hover:bg-white/[0.04] cursor-pointer focus:outline-none focus-visible:ring-2 focus-visible:ring-cyan-400"
                   >
-                    <Upload size={20} className="text-cyan-400 mb-2" />
-                    <span className="text-xs font-medium text-white/80">
+                    <Upload size={18} className="text-cyan-400 mb-1.5" />
+                    <span className="text-xs font-medium text-white/85">
                       Click to upload resume (.pdf, .docx, .txt)
                     </span>
-                    <span className="text-[11px] text-white/40 mt-0.5">
-                      Veya will extract your skills & projects to formulate realistic questions.
+                    <span className="text-[10px] text-white/40 mt-0.5">
+                      Veya will extract your skills to formulate relevant technical prompts.
                     </span>
-                  </div>
+                  </button>
                 ) : (
-                  <div className="flex items-center justify-between rounded-xl border border-emerald-500/30 bg-emerald-950/20 p-3.5">
-                    <div className="flex items-center gap-3">
-                      <div className="flex h-8 w-8 items-center justify-center rounded-lg bg-emerald-500/20 text-emerald-300">
-                        <FileText size={16} />
+                  <div className="flex items-center justify-between rounded-xl border border-emerald-500/30 bg-emerald-950/20 p-3">
+                    <div className="flex items-center gap-2.5">
+                      <div className="flex h-7 w-7 items-center justify-center rounded-lg bg-emerald-500/20 text-emerald-300">
+                        <FileText size={14} />
                       </div>
                       <div className="flex flex-col">
-                        <span className="text-xs font-semibold text-white truncate max-w-[220px] sm:max-w-xs">
+                        <span className="text-xs font-semibold text-white truncate max-w-[200px] sm:max-w-xs">
                           {resumeFile.name}
                         </span>
                         <span className="text-[10px] text-emerald-300">
@@ -374,42 +378,41 @@ export default function Interview() {
                     <button
                       type="button"
                       onClick={() => setResumeFile(null)}
-                      className="p-1 rounded-md text-white/40 hover:text-white hover:bg-white/10 transition-colors"
+                      className="p-1 rounded-md text-white/40 hover:text-white hover:bg-white/10 transition-colors cursor-pointer"
                       aria-label="Remove uploaded resume"
                     >
-                      <X size={15} />
+                      <X size={14} />
                     </button>
                   </div>
                 )}
               </div>
 
               {/* Start Interview CTA */}
-              <div className="mt-8 pt-6 border-t border-white/10 flex flex-col sm:flex-row items-center justify-between gap-4">
-                <div className="text-xs text-white/50 text-center sm:text-left">
-                  <span>Microphone access required for spoken answers.</span>
-                </div>
+              <div className="mt-6 pt-5 border-t border-white/10 flex flex-col sm:flex-row items-center justify-between gap-3">
+                <span className="text-[11px] text-white/50 text-center sm:text-left">
+                  Microphone access required for spoken answers.
+                </span>
 
                 <button
                   type="button"
                   onClick={handleStartStudioInterview}
                   disabled={isStarting}
-                  className="group relative inline-flex w-full sm:w-auto items-center justify-center overflow-hidden rounded-full px-8 py-3.5 text-sm font-semibold text-white shadow-xl transition-all duration-300 hover:scale-105 active:scale-95 disabled:opacity-50 cursor-pointer"
+                  className="group relative inline-flex w-full sm:w-auto items-center justify-center overflow-hidden rounded-full px-7 py-2.5 text-xs font-semibold text-white shadow-lg transition-all duration-200 hover:scale-105 active:scale-95 disabled:opacity-50 cursor-pointer focus:outline-none focus-visible:ring-2 focus-visible:ring-cyan-400"
                   style={{
-                    background: "linear-gradient(135deg, #3B82F6 0%, #8B5CF6 50%, #22D3EE 100%)",
-                    boxShadow: "0 8px 30px -4px rgba(139, 92, 246, 0.6)",
+                    background: "linear-gradient(135deg, #2563EB 0%, #7C3AED 50%, #06B6D4 100%)",
+                    boxShadow: "0 6px 20px -3px rgba(37, 99, 235, 0.4)",
                   }}
                 >
-                  <span className="absolute inset-0 -translate-x-full bg-gradient-to-r from-transparent via-white/30 to-transparent group-hover:animate-[shine-sweep_1.2s_ease-in-out]" />
                   <span className="relative flex items-center gap-2 font-bold tracking-wide">
                     {isStarting ? (
                       <>
-                        <Loader2 size={16} className="animate-spin" />
-                        <span>Initializing Veya...</span>
+                        <Loader2 size={14} className="animate-spin" />
+                        <span>Initializing Studio...</span>
                       </>
                     ) : (
                       <>
                         <span>Start Mock Interview</span>
-                        <ArrowRight size={16} className="transition-transform group-hover:translate-x-1" />
+                        <ArrowRight size={14} className="transition-transform group-hover:translate-x-0.5" />
                       </>
                     )}
                   </span>
@@ -421,39 +424,51 @@ export default function Interview() {
 
         {/* State B: Active Live Interview Cockpit */}
         {isInterviewActive && (
-          <div className="mx-auto flex w-full max-w-xl flex-1 flex-col items-center gap-6" style={{ animation: "fade-up 0.4s ease-out" }}>
-            {/* Main Animated Voice Orb */}
-            <VoiceOrb state={orbState} size={150} />
+          <div
+            className="mx-auto flex w-full max-w-2xl flex-1 flex-col items-center gap-4 sm:gap-4.5"
+            style={{ animation: "fade-up 0.3s ease-out" }}
+          >
+            {/* Voice Assistant Area: Compact Visual & State Indicator */}
+            <div className="flex flex-col items-center gap-2 mb-1">
+              <VoiceOrb state={orbState} size={72} />
 
-            {/* Current Interview Question Display Card */}
-            <div
-              className="w-full rounded-2xl p-5 sm:p-6 transition-all duration-300 text-left"
-              style={{
-                background: "rgba(14, 14, 28, 0.8)",
-                backdropFilter: "blur(20px)",
-                border: "1px solid rgba(139, 92, 246, 0.3)",
-                boxShadow: "0 12px 35px -8px rgba(139, 92, 246, 0.35)",
-              }}
-            >
-              <div className="flex items-center justify-between mb-3">
-                <span className="flex items-center gap-2 text-xs font-semibold text-purple-300 uppercase tracking-wider">
-                  <Volume2 size={14} className="text-cyan-400" />
-                  Current Question #{mm.questionNumber}
-                </span>
-                <span className="rounded bg-cyan-500/10 px-2 py-0.5 text-[10px] font-mono text-cyan-300 border border-cyan-500/20">
-                  {mm.difficulty.toUpperCase()}
-                </span>
+              <div
+                role="status"
+                aria-live="polite"
+                className={`flex items-center gap-1.5 rounded-full px-3 py-1 text-xs font-medium border backdrop-blur-sm ${
+                  mm.micPermissionError
+                    ? "bg-rose-950/40 border-rose-500/30 text-rose-300"
+                    : orbState === "listening"
+                    ? "bg-rose-950/40 border-rose-500/30 text-rose-300"
+                    : orbState === "thinking" || mm.isSkipping
+                    ? "bg-purple-950/40 border-purple-500/30 text-purple-200"
+                    : orbState === "speaking"
+                    ? "bg-cyan-950/40 border-cyan-500/30 text-cyan-200"
+                    : "bg-white/[0.04] border-white/10 text-white/70"
+                }`}
+              >
+                <span
+                  className={`h-1.5 w-1.5 rounded-full ${
+                    mm.micPermissionError
+                      ? "bg-rose-500"
+                      : orbState === "listening"
+                      ? "bg-rose-500 animate-ping"
+                      : orbState === "thinking" || mm.isSkipping
+                      ? "bg-purple-400 animate-pulse"
+                      : orbState === "speaking"
+                      ? "bg-cyan-400 animate-pulse"
+                      : "bg-emerald-400"
+                  }`}
+                  aria-hidden="true"
+                />
+                <span>{assistantStatusLabel}</span>
               </div>
-
-              <p className="text-base sm:text-lg font-semibold text-white leading-relaxed" style={{ fontFamily: "var(--font-heading)" }}>
-                {mm.currentQuestion}
-              </p>
             </div>
 
-            {/* Spoken Conversation Teleprompter Transcript */}
+            {/* Main Stage: Conversation Transcript Panel */}
             <ConversationView transcript={mm.transcript} />
 
-            {/* Interview Progress & Granular Scoring Bar */}
+            {/* Question Progress & Session Actions (Single Skip & Single Quit) */}
             <InterviewProgress
               questionNumber={mm.questionNumber}
               questionLimit={mm.questionLimit}
@@ -462,11 +477,12 @@ export default function Interview() {
               onEnd={() => mm.setShowQuitModal(true)}
               onSkip={() => mm.setShowSkipModal(true)}
               isSkipping={mm.isSkipping}
+              isQuitting={mm.isQuitting}
             />
 
-            {/* Mic Answering Controls & Actions */}
+            {/* Primary Microphone Answering Controls */}
             {!mm.showResumeModal && !mm.showSetupModal && !mm.showReportModal && (
-              <div className="flex flex-col items-center gap-3 w-full">
+              <div className="flex flex-col items-center w-full pt-1">
                 <MicControl
                   state={mm.state}
                   seconds={mm.recordSeconds}
@@ -474,38 +490,6 @@ export default function Interview() {
                   onStop={mm.stopListeningAndSend}
                   label="Tap to answer"
                 />
-
-                {/* Auxiliary Question Actions */}
-                <div className="flex items-center justify-center gap-3">
-                  <button
-                    type="button"
-                    onClick={() => mm.setShowSkipModal(true)}
-                    disabled={mm.isSkipping || mm.state === "thinking"}
-                    className="flex items-center gap-1.5 rounded-full px-3.5 py-1.5 text-xs font-medium text-cyan-300 bg-white/[0.03] border border-cyan-400/25 hover:bg-cyan-500/10 hover:border-cyan-400/50 transition-all cursor-pointer disabled:opacity-50"
-                  >
-                    {mm.isSkipping ? (
-                      <>
-                        <Loader2 size={13} className="animate-spin" />
-                        <span>Skipping...</span>
-                      </>
-                    ) : (
-                      <>
-                        <SkipForward size={13} />
-                        <span>Skip Question</span>
-                      </>
-                    )}
-                  </button>
-
-                  <button
-                    type="button"
-                    onClick={() => mm.setShowQuitModal(true)}
-                    disabled={mm.isQuitting}
-                    className="flex items-center gap-1.5 rounded-full px-3.5 py-1.5 text-xs font-medium text-rose-300 bg-white/[0.03] border border-rose-500/25 hover:bg-rose-500/10 hover:border-rose-400/50 transition-all cursor-pointer disabled:opacity-50"
-                  >
-                    <LogOut size={13} />
-                    <span>Quit Interview</span>
-                  </button>
-                </div>
               </div>
             )}
           </div>

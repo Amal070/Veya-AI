@@ -11,7 +11,14 @@ export default defineConfig({
     port: 5173,
     proxy: {
       '/voice': 'http://127.0.0.1:8000',
-      '/interview': 'http://127.0.0.1:8000',
+      '/interview': {
+        target: 'http://127.0.0.1:8000',
+        bypass: (req) => {
+          if (req.headers.accept?.includes('html')) {
+            return '/index.html';
+          }
+        },
+      },
       '/resume': 'http://127.0.0.1:8000',
       '/audio': 'http://127.0.0.1:8000',
       '/veya': 'http://127.0.0.1:8000',

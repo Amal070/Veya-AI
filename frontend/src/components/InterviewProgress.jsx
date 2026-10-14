@@ -1,91 +1,138 @@
-import { PhoneOff, Sparkles, TrendingUp, SkipForward, LogOut } from "lucide-react";
+import { TrendingUp, SkipForward, LogOut, Loader2 } from "lucide-react";
 
 /**
- * InterviewProgress — Futuristic telemetry bar for live mock interviews.
- * Displays current question milestone, percentage progress bar,
- * difficulty badge, skip question trigger, last turn rubric score,
- * and quit interview trigger with options.
+ * InterviewProgress — Production telemetry bar for mock interview studio.
+ * Displays:
+ * - Current question number and total limit
+ * - Progress percentage derived from actual progress
+ * - Difficulty level badge
+ * - Accessible progress bar
+ * - Single, unified Skip Question and Quit Interview controls
+ * - Last turn rubric feedback (when available)
  */
 export default function InterviewProgress({
-  questionNumber,
-  questionLimit,
-  difficulty,
-  lastFeedback,
-  onEnd,
-  onSkip,
+  questionNumber = 1,
+  questionLimit = 5,
+  difficulty = "medium",
+  lastFeedback = null,
+  onEnd = null,
+  onSkip = null,
   isSkipping = false,
+  isQuitting = false,
 }) {
-  const pct = questionLimit ? Math.min(100, Math.round((questionNumber / questionLimit) * 100)) : 0;
+  const safeLimit = questionLimit && questionLimit > 0 ? questionLimit : 5;
+  const safeNumber = questionNumber || 1;
+  const pct = Math.min(100, Math.max(0, Math.round((safeNumber / safeLimit) * 100)));
 
   return (
-    <div
-      className="w-full max-w-xl rounded-2xl p-4 sm:p-5 transition-all duration-300"
+    <section
+      aria-label="Interview Progress"
+      className="w-full rounded-2xl p-4 sm:p-5 transition-all duration-300"
       style={{
-        background: "rgba(14, 14, 28, 0.75)",
+        background: "rgba(11, 11, 22, 0.75)",
         backdropFilter: "blur(20px)",
-        border: "1px solid rgba(255, 255, 255, 0.1)",
-        boxShadow: "0 10px 30px -10px rgba(0, 0, 0, 0.6), 0 0 20px rgba(139, 92, 246, 0.15)",
-        animation: "fade-up 0.35s ease-out",
+        WebkitBackdropFilter: "blur(20px)",
+        border: "1px solid rgba(255, 255, 255, 0.08)",
+        boxShadow: "0 12px 30px -10px rgba(0, 0, 0, 0.5), 0 0 20px rgba(139, 92, 246, 0.08)",
       }}
     >
-      {/* Top Details */}
-      <div className="mb-2.5 flex items-center justify-between text-xs">
-        <div className="flex items-center gap-2">
-          <span className="font-semibold text-white">
-            Question {questionNumber} of {questionLimit ?? "—"}
+      {/* Top Details & Unified Controls Bar */}
+      <div className="mb-3 flex flex-wrap items-center justify-between gap-3 text-xs">
+        {/* Progress Numbers & Difficulty */}
+        <div className="flex items-center gap-2.5 flex-wrap">
+          <span className="font-semibold text-white text-sm">
+            Question {safeNumber} of {questionLimit ?? "—"}
           </span>
-          <span className="text-[11px] font-mono text-cyan-300">
+          <span className="font-mono text-cyan-300 font-medium">
             ({pct}%)
+          </span>
+          <span
+            className={`rounded-full px-2.5 py-0.5 text-[10px] font-mono uppercase tracking-wider border ${
+              difficulty?.toLowerCase() === "easy"
+                ? "bg-emerald-500/10 text-emerald-300 border-emerald-500/25"
+                : difficulty?.toLowerCase() === "hard"
+                ? "bg-purple-500/10 text-purple-300 border-purple-500/25"
+                : "bg-cyan-500/10 text-cyan-300 border-cyan-500/25"
+            }`}
+          >
+            {difficulty || "Medium"}
           </span>
         </div>
 
+        {/* Primary Action Controls: Skip Question & Quit Interview */}
         <div className="flex items-center gap-2">
-          <span className="rounded-full bg-cyan-500/10 px-2 py-0.5 text-[10px] font-mono text-cyan-300 border border-cyan-500/20 uppercase tracking-wider">
-            {difficulty}
-          </span>
-
           {onSkip && (
             <button
               type="button"
               onClick={onSkip}
               disabled={isSkipping}
-              aria-label="Skip question"
+              aria-label="Skip this question"
               title="Skip Question"
-              className="flex items-center gap-1.5 rounded-full px-2.5 py-1 text-xs font-medium text-cyan-300 bg-cyan-500/10 border border-cyan-500/30 hover:bg-cyan-500/20 hover:border-cyan-400/50 transition-all cursor-pointer disabled:opacity-50"
+              className="flex items-center gap-1.5 rounded-full px-3 py-1.5 text-xs font-medium text-cyan-300 bg-cyan-500/10 border border-cyan-500/30 hover:bg-cyan-500/20 hover:border-cyan-400/50 focus:outline-none focus-visible:ring-2 focus-visible:ring-cyan-400 transition-all cursor-pointer disabled:opacity-50"
             >
-              <SkipForward size={12} />
-              <span>Skip</span>
+              {isSkipping ? (
+                <>
+                  <Loader2 size={12} className="animate-spin" />
+                  <span>Skipping...</span>
+                </>
+              ) : (
+                <>
+                  <SkipForward size={12} />
+                  <span>Skip Question</span>
+                </>
+              )}
             </button>
           )}
 
-          <button
-            type="button"
-            onClick={onEnd}
-            aria-label="Quit interview"
-            title="Quit Interview"
-            className="flex items-center gap-1.5 rounded-full px-2.5 py-1 text-xs font-medium text-rose-300 bg-rose-500/10 border border-rose-500/30 hover:bg-rose-500/20 hover:border-rose-500/50 transition-all cursor-pointer"
-          >
-            <LogOut size={12} />
-            <span>Quit</span>
-          </button>
+          {onEnd && (
+            <button
+              type="button"
+              onClick={onEnd}
+              disabled={isQuitting}
+              aria-label="Quit interview session"
+              title="Quit Interview"
+              className="flex items-center gap-1.5 rounded-full px-3 py-1.5 text-xs font-medium text-rose-300 bg-rose-500/10 border border-rose-500/25 hover:bg-rose-500/20 hover:border-rose-400/40 focus:outline-none focus-visible:ring-2 focus-visible:ring-rose-400 transition-all cursor-pointer disabled:opacity-50"
+            >
+              {isQuitting ? (
+                <>
+                  <Loader2 size={12} className="animate-spin" />
+                  <span>Quitting...</span>
+                </>
+              ) : (
+                <>
+                  <LogOut size={12} />
+                  <span>Quit Interview</span>
+                </>
+              )}
+            </button>
+          )}
         </div>
       </div>
 
-      {/* Progress Track */}
-      <div className="h-2 w-full overflow-hidden rounded-full bg-white/10 p-0.5">
+      {/* Accessible Progress Track */}
+      <div
+        role="progressbar"
+        aria-valuenow={pct}
+        aria-valuemin={0}
+        aria-valuemax={100}
+        aria-label={`Interview progress: ${pct}% complete`}
+        className="h-1.5 sm:h-2 w-full overflow-hidden rounded-full bg-white/10"
+      >
         <div
-          className="h-full rounded-full transition-all duration-500"
+          className="h-full rounded-full transition-all duration-500 ease-out bg-gradient-to-r from-blue-500 via-indigo-500 to-cyan-400"
           style={{
             width: `${pct}%`,
-            background: "linear-gradient(90deg, #3B82F6 0%, #8B5CF6 50%, #22D3EE 100%)",
-            boxShadow: "0 0 10px rgba(34, 211, 238, 0.5)",
+            boxShadow: "0 0 10px rgba(34, 211, 238, 0.4)",
           }}
         />
       </div>
 
-      {/* Turn-by-Turn Real-Time Rubric Feedback */}
+      {/* Turn-by-Turn Rubric Feedback (only rendered when available) */}
       {lastFeedback?.feedback && (
-        <div className="mt-3.5 flex items-start gap-2.5 rounded-xl bg-purple-950/30 p-3 border border-purple-500/20">
+        <div
+          className="mt-3.5 flex items-start gap-2.5 rounded-xl bg-purple-950/25 p-3 border border-purple-500/20"
+          style={{ animation: "fade-up 0.3s ease-out" }}
+        >
           <div className="flex h-5 w-5 shrink-0 items-center justify-center rounded-full bg-purple-500/20 text-purple-300 mt-0.5">
             <TrendingUp size={12} />
           </div>
@@ -97,6 +144,7 @@ export default function InterviewProgress({
           </div>
         </div>
       )}
-    </div>
+    </section>
   );
 }
+

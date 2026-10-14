@@ -175,7 +175,7 @@ export default function Home() {
       <div className="flex w-full max-w-2xl flex-1 flex-col items-center gap-6">
         {/* Futuristic Orb & Acoustic Halo Stage */}
         <div className="flex flex-col items-center gap-3 my-1">
-          <VoiceOrb state={orbState} size={160} />
+          <VoiceOrb state={orbState} size={76} />
           
           <div className="flex items-center gap-2 rounded-full px-3 py-1 bg-white/[0.03] border border-white/10 backdrop-blur-sm">
             <span className="h-1.5 w-1.5 rounded-full bg-cyan-400 animate-pulse" />
@@ -208,12 +208,13 @@ export default function Home() {
             onEnd={() => mm.setShowQuitModal(true)}
             onSkip={() => mm.setShowSkipModal(true)}
             isSkipping={mm.isSkipping}
+            isQuitting={mm.isQuitting}
           />
         )}
 
         {/* Master Acoustic Mic Control Deck */}
         {!mm.showResumeModal && !mm.showSetupModal && !mm.showReportModal && mm.state !== "finished" && (
-          <div className="flex flex-col items-center gap-3 w-full">
+          <div className="flex flex-col items-center w-full">
             <MicControl
               state={mm.state}
               seconds={mm.recordSeconds}
@@ -221,39 +222,6 @@ export default function Home() {
               onStop={mm.stopListeningAndSend}
               label={mm.mode === "interview" ? "Tap to answer" : "Tap to speak"}
             />
-
-            {mm.mode === "interview" && (
-              <div className="flex items-center justify-center gap-3">
-                <button
-                  type="button"
-                  onClick={() => mm.setShowSkipModal(true)}
-                  disabled={mm.isSkipping || mm.state === "thinking"}
-                  className="flex items-center gap-1.5 rounded-full px-3.5 py-1.5 text-xs font-medium text-cyan-300 bg-white/[0.03] border border-cyan-400/25 hover:bg-cyan-500/10 hover:border-cyan-400/50 transition-all cursor-pointer disabled:opacity-50"
-                >
-                  {mm.isSkipping ? (
-                    <>
-                      <Loader2 size={13} className="animate-spin" />
-                      <span>Skipping...</span>
-                    </>
-                  ) : (
-                    <>
-                      <SkipForward size={13} />
-                      <span>Skip Question</span>
-                    </>
-                  )}
-                </button>
-
-                <button
-                  type="button"
-                  onClick={() => mm.setShowQuitModal(true)}
-                  disabled={mm.isQuitting}
-                  className="flex items-center gap-1.5 rounded-full px-3.5 py-1.5 text-xs font-medium text-rose-300 bg-white/[0.03] border border-rose-500/25 hover:bg-rose-500/10 hover:border-rose-400/50 transition-all cursor-pointer disabled:opacity-50"
-                >
-                  <LogOut size={13} />
-                  <span>Quit Interview</span>
-                </button>
-              </div>
-            )}
           </div>
         )}
 
