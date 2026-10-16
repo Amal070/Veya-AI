@@ -74,6 +74,10 @@ export function useVeya() {
   const [isSkipping, setIsSkipping] = useState(false);
   const [isQuitting, setIsQuitting] = useState(false);
 
+  const [resumeInfo, setResumeInfo] = useState(saved.resumeInfo || null);
+  const [isUploadingResume, setIsUploadingResume] = useState(false);
+  const isUploadingResumeRef = useRef(false);
+
   // Modal flags — purely UI, driven by explicit user intent/events rather
   // than guessed from transcript text.
   const [showResumeModal, setShowResumeModal] = useState(false);
@@ -235,20 +239,52 @@ export function useVeya() {
   // --- Resume upload -----------------------------------------------------------
 
   const uploadResume = useCallback(
-    async (file, explicitSessionId = null) => {
+    async (file, explicitSessionId = null, { openSetupModal = true } = {}) => {
+      if (isUploadingResumeRef.current) {
+        console.warn("[useVeya] Resume upload is already in flight. Ignoring duplicate call.");
+        return null;
+      }
+
+      isUploadingResumeRef.current = true;
+      setIsUploadingResume(true);
       setError(null);
+
       const targetSessionId = explicitSessionId || resumeSessionId || sessionId || crypto.randomUUID();
+
       try {
         const data = await apiUploadResume(file, targetSessionId);
+
+        const info = {
+          candidateName: data.candidate_name || "",
+          skillsDetected: Array.isArray(data.skills_detected) ? data.skills_detected : [],
+          sessionId: data.session_id,
+          message: data.message || "",
+        };
+
+        setResumeInfo(info);
         setSessionId(data.session_id);
         setResumeSessionId(data.session_id);
         setShowResumeModal(false);
-        setShowSetupModal(true);
+
+        if (openSetupModal !== false) {
+          setShowSetupModal(true);
+        }
+
+        saveSession({
+          sessionId: data.session_id,
+          resumeInfo: info,
+        });
+
+        console.info("[useVeya] Resume successfully processed and stored in session state.");
         return data;
       } catch (err) {
         const msg = getApiErrorMessage(err, "Resume upload failed. Please try again.");
+        console.error("[useVeya] Resume upload error:", msg);
         setError(msg);
         throw err;
+      } finally {
+        isUploadingResumeRef.current = false;
+        setIsUploadingResume(false);
       }
     },
     [resumeSessionId, sessionId]
@@ -309,6 +345,7 @@ export function useVeya() {
 
   const endInterview = useCallback(() => {
     clearSession();
+    setResumeInfo(null);
     setMode("assistant");
     setState("idle");
     setCurrentQuestion(null);
@@ -444,6 +481,7 @@ export function useVeya() {
 
   const startNewInterview = useCallback(() => {
     clearSession();
+    setResumeInfo(null);
     setShowReportModal(false);
     setReport(null);
     setTranscript([]);
@@ -583,6 +621,8 @@ export function useVeya() {
     showSkipModal,
     setShowSkipModal,
     uploadResume,
+    resumeInfo,
+    isUploadingResume,
 
     // audio element ref the component must attach to <audio>
     audioRef,

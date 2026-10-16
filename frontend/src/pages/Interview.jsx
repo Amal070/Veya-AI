@@ -52,6 +52,7 @@ export default function Interview() {
   const [uploadError, setUploadError] = useState(null);
 
   const fileInputRef = useRef(null);
+  const isStartingRef = useRef(false);
 
   const orbState =
     mm.state === "listening" || mm.state === "thinking" || mm.state === "speaking"
@@ -91,6 +92,12 @@ export default function Interview() {
   };
 
   const handleStartStudioInterview = async () => {
+    if (isStartingRef.current || isStarting) {
+      console.warn("[Interview] Interview initialization already in progress. Ignoring duplicate trigger.");
+      return;
+    }
+
+    isStartingRef.current = true;
     setIsStarting(true);
     setUploadError(null);
 
@@ -100,8 +107,8 @@ export default function Interview() {
     try {
       let activeSessionId = crypto.randomUUID();
       if (resumeFile) {
-        // Upload resume first and capture the exact session_id
-        const uploadResult = await mm.uploadResume(resumeFile, activeSessionId);
+        // Upload resume first without opening redundant setup modal
+        const uploadResult = await mm.uploadResume(resumeFile, activeSessionId, { openSetupModal: false });
         if (uploadResult?.session_id) {
           activeSessionId = uploadResult.session_id;
         }
@@ -117,6 +124,7 @@ export default function Interview() {
       console.error("Failed to start studio interview:", err);
       setUploadError(getApiErrorMessage(err, "Failed to initialize interview session. Please try again."));
     } finally {
+      isStartingRef.current = false;
       setIsStarting(false);
     }
   };

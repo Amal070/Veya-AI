@@ -207,3 +207,124 @@ test("startInterview, submitAnswerText, and submitAnswerVoice format payloads co
     api.post = origPost;
   }
 });
+
+test("uploadResume handles HTTP 200 success with backend schema and normalizes fields", async () => {
+  const origPost = api.post;
+
+  try {
+    api.post = async () => {
+      return {
+        status: 200,
+        data: {
+          success: true,
+          session_id: "test-sess-999",
+          next_step: "question_count",
+          message: "Resume analyzed successfully. How many questions would you like?",
+          candidate_name: "Alex Smith",
+          skills_detected: ["Python", "Docker", "Machine Learning"],
+        },
+      };
+    };
+
+    const mockFile = new Blob(["%PDF-1.4 test"], { type: "application/pdf" });
+    const result = await uploadResume(mockFile, "test-sess-999");
+
+    assert.equal(result.success, true);
+    assert.equal(result.session_id, "test-sess-999");
+    assert.equal(result.candidate_name, "Alex Smith");
+    assert.deepEqual(result.skills_detected, ["Python", "Docker", "Machine Learning"]);
+    assert.equal(result.next_step, "question_count");
+    assert.match(result.message, /Resume analyzed successfully/i);
+  } finally {
+    api.post = origPost;
+  }
+});
+
+test("uploadResume rejects malformed responses without treating them as network errors", async () => {
+  const origPost = api.post;
+
+  try {
+    // 1. Backend returns null data
+    api.post = async () => ({ status: 200, data: null });
+    const mockFile = new Blob(["dummy"], { type: "application/pdf" });
+    await assert.rejects(
+      async () => uploadResume(mockFile, "test-sid"),
+      /Invalid response received from resume processing server/
+    );
+
+    // 2. Backend returns non-object data (e.g. string/HTML error with 200)
+    api.post = async () => ({ status: 200, data: "<html>Error</html>" });
+    await assert.rejects(
+      async () => uploadResume(mockFile, "test-sid"),
+      /Invalid response received from resume processing server/
+    );
+
+    // 3. Backend returns success: false
+    api.post = async () => ({
+      status: 200,
+      data: { success: false, message: "Could not extract readable text." },
+    });
+    await assert.rejects(
+      async () => uploadResume(mockFile, "test-sid"),
+      /Could not extract readable text/
+    );
+  } finally {
+    api.post = origPost;
+  }
+});
+
+test("getApiErrorMessage handles various error structures and distinguishes network errors from HTTP/runtime errors", () => {
+  // Raw string error
+  assert.equal(getApiErrorMessage("Direct error message"), "Direct error message");
+
+  // Cancelled request error
+  assert.equal(getApiErrorMessage({ code: "ERR_CANCELED" }), "Request was cancelled.");
+  assert.equal(getApiErrorMessage({ name: "CanceledError" }), "Request was cancelled.");
+
+  // JavaScript Error instance
+  const customErr = new Error("Custom JS failure");
+  assert.equal(getApiErrorMessage(customErr), "Custom JS failure");
+
+  // HTTP 500 with custom detail
+  const err500Detail = {
+    response: {
+      status: 500,
+      data: { detail: "Database connection failed during analysis" },
+    },
+  };
+  assert.equal(getApiErrorMessage(err500Detail), "Database connection failed during analysis");
+
+  // HTTP 500 without custom detail
+  const err500NoDetail = {
+    response: {
+      status: 500,
+      data: {},
+    },
+  };
+  assert.equal(getApiErrorMessage(err500NoDetail), "Backend server error (500). Please try again in a few moments.");
+
+  // HTTP response with data.error field
+  const errCustomField = {
+    response: {
+      status: 400,
+      data: { error: "Resume format PKZIP unsupported" },
+    },
+  };
+  assert.equal(getApiErrorMessage(errCustomField), "Resume format PKZIP unsupported");
+
+  // HTTP response with plain string data
+  const errStringBody = {
+    response: {
+      status: 502,
+      data: "502 Bad Gateway: Proxy Error",
+    },
+  };
+  assert.equal(getApiErrorMessage(errStringBody), "502 Bad Gateway: Proxy Error");
+
+  // Genuine network error includes dynamic BASE_URL
+  const netErr = { code: "ERR_NETWORK", message: "Network Error" };
+  const netMsg = getApiErrorMessage(netErr);
+  assert.match(netMsg, /Unable to reach the backend server/);
+  assert.ok(netMsg.includes(BASE_URL), "Must include BASE_URL in network error");
+});
+

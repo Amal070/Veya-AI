@@ -79,9 +79,29 @@ api.interceptors.request.use(
 export function getApiErrorMessage(error, defaultMessage = "An unexpected error occurred.") {
   if (!error) return defaultMessage;
 
+  // Raw string error passed in
+  if (typeof error === "string") {
+    return error.trim().length > 0 ? error : defaultMessage;
+  }
+
+  // Cancelled or aborted requests (e.g. duplicate submissions or navigating away)
+  if (
+    axios.isCancel?.(error) ||
+    error.name === "CanceledError" ||
+    error.name === "AbortError" ||
+    error.code === "ERR_CANCELED"
+  ) {
+    return "Request was cancelled.";
+  }
+
   // 1. HTTP error response received from backend
   if (error.response) {
     const data = error.response.data;
+
+    // Direct string body (e.g. text/plain or gateway error)
+    if (typeof data === "string" && data.trim().length > 0) {
+      return data.trim();
+    }
 
     // FastAPI detail string: {"detail": "..."}
     if (typeof data?.detail === "string" && data.detail.trim().length > 0) {
@@ -95,6 +115,10 @@ export function getApiErrorMessage(error, defaultMessage = "An unexpected error 
 
     if (typeof data?.message === "string" && data.message.trim().length > 0) {
       return data.message;
+    }
+
+    if (typeof data?.error === "string" && data.error.trim().length > 0) {
+      return data.error;
     }
 
     const status = error.response.status;
@@ -123,13 +147,19 @@ export function getApiErrorMessage(error, defaultMessage = "An unexpected error 
     }
   }
 
-  // 2. Network / connection failure (CORS rejection, server offline, Render sleeping)
+  // 2. Timeout error
   if (error.code === "ECONNABORTED" || error.message?.toLowerCase().includes("timeout")) {
     return "Request timed out while contacting the backend server. Render instances may take ~30s to wake up on cold start. Please retry.";
   }
 
+  // 3. Genuine Network / connection failure (CORS rejection, server offline, Render sleeping)
   if (error.code === "ERR_NETWORK" || error.message === "Network Error") {
-    return "Unable to reach the backend server (https://veya-ai-backend.onrender.com). Please check your connection or wait for the server to wake up.";
+    return `Unable to reach the backend server (${BASE_URL}). Please check your connection or wait for the server to wake up.`;
+  }
+
+  // 4. Standard JavaScript Error instances
+  if (error instanceof Error && error.message && error.message.trim().length > 0) {
+    return error.message;
   }
 
   return error.message || defaultMessage;
@@ -175,14 +205,50 @@ export async function transcribeClip(blob) {
  * browser/axios generates the correct multipart boundary.
  */
 export async function uploadResume(file, sessionId = crypto.randomUUID()) {
+  const fileExt = (file?.name || "").split(".").pop()?.toLowerCase();
+  const safeFileSize = typeof file?.size === "number" ? `${(file.size / 1024).toFixed(1)} KB` : "unknown size";
+  const maskedSessionId = typeof sessionId === "string" ? `${sessionId.slice(0, 8)}...` : "unknown";
+
+  // Safe diagnostic logging: log metadata only, never resume contents or PII
+  console.info(`[API] Initiating resume upload: ext=.${fileExt}, size=${safeFileSize}, sessionId=${maskedSessionId}`);
+
   const formData = new FormData();
   formData.append("file", file);
 
   const response = await api.post("/resume/upload", formData, {
     params: { session_id: sessionId },
+    timeout: 45000,
   });
 
-  return { ...response.data, session_id: sessionId };
+  const data = response?.data;
+  const isObject = data && typeof data === "object" && !Array.isArray(data);
+
+  // Safe diagnostic logging: response status and shape without PII
+  console.info(
+    `[API] Resume upload response received: status=${response?.status}, isObject=${Boolean(isObject)}, success=${Boolean(
+      data?.success
+    )}, hasCandidateName=${Boolean(data?.candidate_name)}, skillsCount=${
+      Array.isArray(data?.skills_detected) ? data.skills_detected.length : 0
+    }`
+  );
+
+  if (!isObject) {
+    throw new Error("Invalid response received from resume processing server.");
+  }
+
+  if (data.success === false) {
+    throw new Error(data.message || data.detail || "Resume analysis could not be completed.");
+  }
+
+  return {
+    ...data,
+    session_id: data.session_id || sessionId,
+    candidate_name: data.candidate_name || "",
+    skills_detected: Array.isArray(data.skills_detected) ? data.skills_detected : [],
+    message: data.message || "Resume analyzed successfully. How many questions would you like?",
+    next_step: data.next_step || "question_count",
+    success: true,
+  };
 }
 
 // --- Interview ---------------------------------------------------------------

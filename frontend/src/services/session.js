@@ -2,6 +2,7 @@ const STORAGE_KEY = "veya.session.v2";
 
 export const defaultSession = () => ({
   sessionId: null,
+  resumeInfo: null,
   difficulty: "medium",
   questionLimit: 5,
   questionNumber: 0,

@@ -10,6 +10,7 @@ import { getApiErrorMessage } from "../../services/api";
  */
 export default function ResumeUploadModal({ open, onClose, onUploaded, uploadResume }) {
   const inputRef = useRef(null);
+  const isSubmittingRef = useRef(false);
   const [file, setFile] = useState(null);
   const [dragging, setDragging] = useState(false);
   const [submitting, setSubmitting] = useState(false);
@@ -29,16 +30,24 @@ export default function ResumeUploadModal({ open, onClose, onUploaded, uploadRes
       return;
     }
 
+    // Safe diagnostic log without file contents or user data
+    console.info(`[ResumeUploadModal] Resume selected: ext=.${ext}, size=${(selected.size / 1024).toFixed(1)} KB`);
     setFile(selected);
     setError(null);
   };
 
   const handleSubmit = async () => {
+    if (isSubmittingRef.current || submitting) {
+      console.warn("[ResumeUploadModal] Submission already in flight. Ignoring duplicate click.");
+      return;
+    }
+
     if (!file) {
       setError("Choose a resume file first.");
       return;
     }
 
+    isSubmittingRef.current = true;
     setSubmitting(true);
     setError(null);
 
@@ -47,14 +56,16 @@ export default function ResumeUploadModal({ open, onClose, onUploaded, uploadRes
       setFile(null);
       onUploaded?.(data);
     } catch (err) {
-      console.error("Resume upload failed:", err);
+      console.error("[ResumeUploadModal] Upload failed:", err?.message || err);
       setError(getApiErrorMessage(err, "That upload didn't go through. Please try again."));
     } finally {
+      isSubmittingRef.current = false;
       setSubmitting(false);
     }
   };
 
   const handleClose = () => {
+    isSubmittingRef.current = false;
     setFile(null);
     setError(null);
     onClose?.();
