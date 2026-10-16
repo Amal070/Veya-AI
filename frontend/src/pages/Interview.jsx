@@ -24,6 +24,7 @@ import QuitInterviewModal from "../components/modals/QuitInterviewModal";
 import SkipQuestionModal from "../components/modals/SkipQuestionModal";
 import BackgroundFX from "../components/landing/BackgroundFX";
 import { useVeya } from "../hooks/useVeya";
+import { getApiErrorMessage } from "../services/api";
 
 const DIFFICULTIES = [
   { value: "easy", label: "Easy", desc: "Core fundamentals & basic concepts" },
@@ -114,7 +115,7 @@ export default function Interview() {
       });
     } catch (err) {
       console.error("Failed to start studio interview:", err);
-      setUploadError("Failed to initialize interview session. Please try again.");
+      setUploadError(getApiErrorMessage(err, "Failed to initialize interview session. Please try again."));
     } finally {
       setIsStarting(false);
     }

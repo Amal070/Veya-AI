@@ -1,6 +1,7 @@
 from functools import lru_cache
+from typing import Any
 
-from pydantic import AliasChoices, Field
+from pydantic import AliasChoices, Field, field_validator
 from pydantic_settings import BaseSettings, SettingsConfigDict
 
 
@@ -53,11 +54,44 @@ class Settings(BaseSettings):
     max_question_count: int = 15
 
     # CORS
-    cors_origins: list[str] = [
-    "http://localhost:5173",
-    "https://veya.web.app",
-    "https://veya.firebaseapp.com",
-]
+    cors_origins: list[str] = Field(
+        default=[
+            "https://veya-ai-frontend.onrender.com",
+            "http://localhost:5173",
+            "http://127.0.0.1:5173",
+            "http://localhost:3000",
+            "http://127.0.0.1:3000",
+            "http://localhost:4173",
+            "http://127.0.0.1:4173",
+            "https://veya.web.app",
+            "https://veya.firebaseapp.com",
+        ],
+        validation_alias=AliasChoices("VEYA_CORS_ORIGINS", "CORS_ORIGINS"),
+    )
+
+    @field_validator("cors_origins", mode="before")
+    @classmethod
+    def parse_cors_origins(cls, v: Any) -> list[str]:
+        if isinstance(v, str):
+            v = v.strip()
+            if v.startswith("[") and v.endswith("]"):
+                import json
+
+                try:
+                    parsed = json.loads(v)
+                    if isinstance(parsed, list):
+                        return [str(item).strip().rstrip("/") for item in parsed if item]
+                except Exception:
+                    pass
+            # Comma-separated or newline-separated fallback
+            return [
+                part.strip().rstrip("/")
+                for part in v.replace("\n", ",").split(",")
+                if part.strip()
+            ]
+        if isinstance(v, (list, tuple, set)):
+            return [str(item).strip().rstrip("/") for item in v if item]
+        return v
 
     # Persistence
     checkpoint_db_path: str = "veya_checkpoints.sqlite"

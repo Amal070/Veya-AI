@@ -1,6 +1,7 @@
 import { useRef, useState } from "react";
 import { Upload, FileText, X, Loader2, Sparkles } from "lucide-react";
 import Modal from "./Modal";
+import { getApiErrorMessage } from "../../services/api";
 
 /**
  * Step 1 of interview setup: resume upload.
@@ -47,7 +48,7 @@ export default function ResumeUploadModal({ open, onClose, onUploaded, uploadRes
       onUploaded?.(data);
     } catch (err) {
       console.error("Resume upload failed:", err);
-      setError(err?.response?.data?.detail || "That upload didn't go through. Try again.");
+      setError(getApiErrorMessage(err, "That upload didn't go through. Please try again."));
     } finally {
       setSubmitting(false);
     }

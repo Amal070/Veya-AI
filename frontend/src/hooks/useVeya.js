@@ -10,6 +10,7 @@ import {
   uploadResume as apiUploadResume,
   skipInterviewQuestion as apiSkipInterviewQuestion,
   endInterviewEarly as apiEndInterviewEarly,
+  getApiErrorMessage,
 } from "../services/api";
 import { loadSession, saveSession, clearSession } from "../services/session";
 
@@ -221,7 +222,7 @@ export function useVeya() {
       setState("idle");
     } catch (err) {
       console.error("Voice exchange failed:", err);
-      setError("Something went wrong talking to Veya. Please try again.");
+      setError(getApiErrorMessage(err, "Something went wrong talking to Veya. Please try again."));
       setState("error");
     }
   }, [recorder, mode, sessionId, pushLine, playAudio, currentQuestion, questionNumber, difficulty, transcript]);
@@ -237,12 +238,18 @@ export function useVeya() {
     async (file, explicitSessionId = null) => {
       setError(null);
       const targetSessionId = explicitSessionId || resumeSessionId || sessionId || crypto.randomUUID();
-      const data = await apiUploadResume(file, targetSessionId);
-      setSessionId(data.session_id);
-      setResumeSessionId(data.session_id);
-      setShowResumeModal(false);
-      setShowSetupModal(true);
-      return data;
+      try {
+        const data = await apiUploadResume(file, targetSessionId);
+        setSessionId(data.session_id);
+        setResumeSessionId(data.session_id);
+        setShowResumeModal(false);
+        setShowSetupModal(true);
+        return data;
+      } catch (err) {
+        const msg = getApiErrorMessage(err, "Resume upload failed. Please try again.");
+        setError(msg);
+        throw err;
+      }
     },
     [resumeSessionId, sessionId]
   );
@@ -293,7 +300,7 @@ export function useVeya() {
         setState("idle");
       } catch (err) {
         console.error("Failed to start interview:", err);
-        setError("Couldn't start the interview. Please try again.");
+        setError(getApiErrorMessage(err, "Couldn't start the interview. Please try again."));
         setState("error");
       }
     },
@@ -384,7 +391,7 @@ export function useVeya() {
       setState("idle");
     } catch (err) {
       console.error("Failed to skip question:", err);
-      setError("Failed to skip question. Please try again.");
+      setError(getApiErrorMessage(err, "Failed to skip question. Please try again."));
       setIsSkipping(false);
       setState("idle");
     }
@@ -417,6 +424,7 @@ export function useVeya() {
           }
         } catch (err) {
           console.error("Failed to generate early report:", err);
+          setError(getApiErrorMessage(err, "Failed to generate interview report."));
           setIsQuitting(false);
         }
       }
@@ -514,7 +522,7 @@ export function useVeya() {
         }
       } catch (err) {
         console.error("Failed to submit answer:", err);
-        setError("Something went wrong. Please try again.");
+        setError(getApiErrorMessage(err, "Something went wrong submitting your answer. Please try again."));
         setState("error");
       }
     },

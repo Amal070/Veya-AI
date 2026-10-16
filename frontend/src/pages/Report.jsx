@@ -1,7 +1,7 @@
 import { useState, useEffect } from "react";
 import { useParams, useNavigate } from "react-router-dom";
 import { Loader2, AlertCircle } from "lucide-react";
-import { fetchInterviewReport } from "../services/api";
+import { fetchInterviewReport, getApiErrorMessage } from "../services/api";
 
 export default function Report() {
   const { sessionId: routeSessionId } = useParams();
@@ -21,7 +21,7 @@ export default function Report() {
       if (updateUrl) navigate(`/report/${id}`, { replace: true });
     } catch (err) {
       console.error("Failed to load report:", err);
-      setError("Couldn't find a report for that session ID.");
+      setError(getApiErrorMessage(err, "Couldn't find a report for that session ID."));
       setReport(null);
     } finally {
       setLoading(false);
@@ -47,7 +47,7 @@ export default function Report() {
       } catch (err) {
         if (cancelled) return;
         console.error("Failed to load report:", err);
-        setError("Couldn't find a report for that session ID.");
+        setError(getApiErrorMessage(err, "Couldn't find a report for that session ID."));
         setReport(null);
       } finally {
         if (!cancelled) setLoading(false);
