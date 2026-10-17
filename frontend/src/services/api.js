@@ -17,6 +17,15 @@ export function normalizeBaseUrl(rawUrl) {
   if (!trimmed) {
     return DEFAULT_BACKEND_URL;
   }
+  // In a secure production browser context (https:), prevent insecure localhost URLs
+  // caused by stale builds or dev environment leaks
+  if (
+    typeof window !== "undefined" &&
+    window.location?.protocol === "https:" &&
+    /^https?:\/\/(localhost|127\.0\.0\.1)(:\d+)?/i.test(trimmed)
+  ) {
+    return DEFAULT_BACKEND_URL;
+  }
   return trimmed.replace(/\/+$/, "");
 }
 
@@ -205,27 +214,48 @@ export async function transcribeClip(blob) {
  * browser/axios generates the correct multipart boundary.
  */
 export async function uploadResume(file, sessionId = crypto.randomUUID()) {
+  const startTime = Date.now();
+  const startTimeIso = new Date(startTime).toISOString();
   const fileExt = (file?.name || "").split(".").pop()?.toLowerCase();
   const safeFileSize = typeof file?.size === "number" ? `${(file.size / 1024).toFixed(1)} KB` : "unknown size";
   const maskedSessionId = typeof sessionId === "string" ? `${sessionId.slice(0, 8)}...` : "unknown";
 
   // Safe diagnostic logging: log metadata only, never resume contents or PII
-  console.info(`[API] Initiating resume upload: ext=.${fileExt}, size=${safeFileSize}, sessionId=${maskedSessionId}`);
+  console.info(
+    `[API] Initiating resume upload: startTime=${startTimeIso}, ext=.${fileExt}, size=${safeFileSize}, sessionId=${maskedSessionId}`
+  );
 
   const formData = new FormData();
   formData.append("file", file);
 
-  const response = await api.post("/resume/upload", formData, {
-    params: { session_id: sessionId },
-    timeout: 45000,
-  });
+  let response;
+  try {
+    response = await api.post("/resume/upload", formData, {
+      params: { session_id: sessionId },
+      timeout: 60000,
+    });
+  } catch (error) {
+    const elapsedMs = Date.now() - startTime;
+    const httpStatus = error?.response?.status ?? "no_response";
+    const errorCode = error?.code || error?.name || "UNKNOWN_ERROR";
+    const responseAvailable = Boolean(error?.response);
 
+    // Safe diagnostic logging on failure: timestamps, latency, status, error code without PII
+    console.error(
+      `[API] Resume upload failed: startTime=${startTimeIso}, elapsedMs=${elapsedMs}ms, status=${httpStatus}, errorCode=${errorCode}, responseAvailable=${responseAvailable}`
+    );
+    throw error;
+  }
+
+  const elapsedMs = Date.now() - startTime;
   const data = response?.data;
   const isObject = data && typeof data === "object" && !Array.isArray(data);
 
-  // Safe diagnostic logging: response status and shape without PII
+  // Safe diagnostic logging: response status, elapsed time, availability, and shape without PII
   console.info(
-    `[API] Resume upload response received: status=${response?.status}, isObject=${Boolean(isObject)}, success=${Boolean(
+    `[API] Resume upload response received: startTime=${startTimeIso}, elapsedMs=${elapsedMs}ms, status=${
+      response?.status
+    }, responseAvailable=true, isObject=${Boolean(isObject)}, success=${Boolean(
       data?.success
     )}, hasCandidateName=${Boolean(data?.candidate_name)}, skillsCount=${
       Array.isArray(data?.skills_detected) ? data.skills_detected.length : 0
@@ -291,7 +321,7 @@ export async function skipInterviewQuestion(sessionId) {
   try {
     const response = await api.post("/interview/skip", { session_id: sessionId });
     return response.data;
-  } catch (_err) {
+  } catch {
     // Fallback if backend does not yet have /interview/skip
     return submitAnswerText(sessionId, "Candidate opted to skip this question.");
   }
@@ -301,7 +331,7 @@ export async function endInterviewEarly(sessionId) {
   try {
     const response = await api.post("/interview/end", { session_id: sessionId });
     return response.data;
-  } catch (_err) {
+  } catch {
     // Fallback if backend does not yet have /interview/end
     try {
       const rep = await fetchInterviewReport(sessionId);

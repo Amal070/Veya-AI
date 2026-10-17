@@ -328,3 +328,42 @@ test("getApiErrorMessage handles various error structures and distinguishes netw
   assert.ok(netMsg.includes(BASE_URL), "Must include BASE_URL in network error");
 });
 
+test("uploadResume logs safe diagnostic info on failure and rethrows", async () => {
+  const origPost = api.post;
+  const loggedErrors = [];
+  const origConsoleError = console.error;
+
+  try {
+    console.error = (...args) => {
+      loggedErrors.push(args.join(" "));
+    };
+
+    // Simulate an Axios timeout failure
+    api.post = async () => {
+      const err = new Error("timeout of 60000ms exceeded");
+      err.code = "ECONNABORTED";
+      throw err;
+    };
+
+    const mockFile = new Blob(["test resume content"], { type: "application/pdf" });
+    await assert.rejects(
+      async () => uploadResume(mockFile, "test-sess-diag"),
+      (err) => err.code === "ECONNABORTED"
+    );
+
+    assert.equal(loggedErrors.length, 1);
+    const log = loggedErrors[0];
+    assert.match(log, /\[API\] Resume upload failed:/);
+    assert.match(log, /startTime=\d{4}-\d{2}-\d{2}T/);
+    assert.match(log, /elapsedMs=\d+ms/);
+    assert.match(log, /status=no_response/);
+    assert.match(log, /errorCode=ECONNABORTED/);
+    assert.match(log, /responseAvailable=false/);
+    // Crucial: ensure no resume contents or private data logged
+    assert.ok(!log.includes("test resume content"));
+  } finally {
+    api.post = origPost;
+    console.error = origConsoleError;
+  }
+});
+
