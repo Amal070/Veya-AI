@@ -49,13 +49,16 @@ def _heuristic_resume_profile(raw_text: str) -> dict[str, Any]:
             if current_section == "projects":
                 current_section = ""
 
-        if current_section == "projects" and len(line) > 10:
-            if re.match(r"^([•\-\*]|\d+\.|\b[A-Z][a-zA-Z0-9\s]{2,30}:)", line):
-                projects.append({
-                    "name": line.split(":")[0].strip("•-*0123456789. "),
-                    "description": line,
-                    "technologies": [t for t in found_tech if t.lower() in line.lower()],
-                })
+        if current_section == "projects" and len(line) > 8:
+            if re.match(r"^([•\-\*]|\d+\.|\b[A-Z][a-zA-Z0-9\s]{2,40}[:\-])", line) or " - " in line:
+                raw_name = line.split(" - ")[0] if " - " in line else line.split(":")[0]
+                clean_name = raw_name.strip("•-*0123456789. ")
+                if clean_name and len(clean_name) <= 50:
+                    projects.append({
+                        "name": clean_name,
+                        "description": line,
+                        "technologies": [t for t in found_tech if t.lower() in line.lower()],
+                    })
 
     return {
         "candidate_name": candidate_name[:50],
@@ -178,11 +181,18 @@ async def analyze_resume(file_path: str, session_id: str, original_filename: str
         raw_text=resume_text,
     )
 
-    # Index into vector store asynchronously in background
-    chunks = await asyncio.to_thread(ingest_resume, resume_text, session_id)
+    # Index into vector store asynchronously in background so HTTP response is fast
+    async def _bg_ingest() -> None:
+        try:
+            stored = await asyncio.to_thread(ingest_resume, resume_text, session_id)
+            logger.info("[RESUME] Background indexing complete: %d chunks stored for session %s", stored, session_id)
+        except Exception as e:
+            logger.warning("[RESUME] Background vector store ingestion failed for session %s: %s", session_id, e)
+
+    asyncio.create_task(_bg_ingest())
 
     return {
         "resume_text": resume_text,
-        "chunks_stored": chunks,
+        "chunks_stored": 0,
         "profile": structured_profile,
     }

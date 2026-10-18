@@ -232,7 +232,7 @@ export async function uploadResume(file, sessionId = crypto.randomUUID()) {
   try {
     response = await api.post("/resume/upload", formData, {
       params: { session_id: sessionId },
-      timeout: 60000,
+      timeout: 90000,
     });
   } catch (error) {
     const elapsedMs = Date.now() - startTime;
