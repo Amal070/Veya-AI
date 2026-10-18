@@ -61,7 +61,7 @@ export function buildApiUrl(path = "") {
 
 export const api = axios.create({
   baseURL: BASE_URL,
-  timeout: 30000,
+  timeout: 60000,
 });
 
 // Request interceptor to normalize URLs and prevent duplicate slashes or duplicate /api
@@ -284,26 +284,34 @@ export async function uploadResume(file, sessionId = crypto.randomUUID()) {
 // --- Interview ---------------------------------------------------------------
 
 export async function startInterview(sessionId, questionLimit, difficulty, jobRole = "") {
-  const response = await api.post("/interview/start", {
-    session_id: sessionId,
-    question_limit: questionLimit,
-    question_count: questionLimit,
-    difficulty,
-    job_role: jobRole,
-  });
+  const response = await api.post(
+    "/interview/start",
+    {
+      session_id: sessionId,
+      question_limit: questionLimit,
+      question_count: questionLimit,
+      difficulty,
+      job_role: jobRole,
+    },
+    { timeout: 60000 }
+  );
   return response.data;
 }
 
 export async function fetchInterviewSession(sessionId) {
-  const response = await api.get(`/interview/session/${sessionId}`);
+  const response = await api.get(`/interview/session/${sessionId}`, { timeout: 30000 });
   return response.data;
 }
 
 export async function submitAnswerText(sessionId, answer) {
-  const response = await api.post("/interview/answer", {
-    session_id: sessionId,
-    answer,
-  });
+  const response = await api.post(
+    "/interview/answer",
+    {
+      session_id: sessionId,
+      answer,
+    },
+    { timeout: 60000 }
+  );
   return response.data;
 }
 
@@ -313,6 +321,7 @@ export async function submitAnswerVoice(sessionId, blob) {
 
   const response = await api.post("/interview/voice/answer", formData, {
     params: { session_id: sessionId },
+    timeout: 60000,
   });
   return response.data;
 }

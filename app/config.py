@@ -38,7 +38,7 @@ class Settings(BaseSettings):
     llm_max_retries: int = 2
 
     # Whisper (STT)
-    whisper_model_size: str = "base"
+    whisper_model_size: str = "tiny.en"
     whisper_device: str = "cpu"
     whisper_compute_type: str = "int8"
     whisper_min_confidence_logprob: float = -1.0

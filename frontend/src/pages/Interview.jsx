@@ -10,6 +10,7 @@ import {
   Sparkles,
   Loader2,
   X,
+  Send,
 } from "lucide-react";
 
 import VoiceOrb from "../components/VoiceOrb";
@@ -50,6 +51,7 @@ export default function Interview() {
   const [resumeFile, setResumeFile] = useState(null);
   const [isStarting, setIsStarting] = useState(false);
   const [uploadError, setUploadError] = useState(null);
+  const [typedAnswer, setTypedAnswer] = useState("");
 
   const fileInputRef = useRef(null);
   const isStartingRef = useRef(false);
@@ -71,7 +73,9 @@ export default function Interview() {
     ? "Processing your answer..."
     : mm.state === "speaking"
     ? "Generating the next question..."
-    : "Ready to answer";
+    : mm.state === "error"
+    ? "Connection error • Ready to retry"
+    : "Voice Assistant Ready";
 
   const handleFileChange = (e) => {
     const file = e.target.files?.[0];
@@ -489,16 +493,46 @@ export default function Interview() {
               isQuitting={mm.isQuitting}
             />
 
-            {/* Primary Microphone Answering Controls */}
+            {/* Primary Microphone & Text Fallback Answering Controls */}
             {!mm.showResumeModal && !mm.showSetupModal && !mm.showReportModal && (
-              <div className="flex flex-col items-center w-full pt-1">
+              <div className="flex flex-col items-center w-full max-w-xl gap-3 pt-1">
                 <MicControl
                   state={mm.state}
                   seconds={mm.recordSeconds}
                   onStart={mm.startListening}
                   onStop={mm.stopListeningAndSend}
                   label="Tap to answer"
+                  permissionError={mm.micPermissionError}
                 />
+
+                {/* Text Answering Alternative */}
+                <form
+                  onSubmit={async (e) => {
+                    e.preventDefault();
+                    if (!typedAnswer.trim() || mm.state === "thinking" || mm.state === "speaking") return;
+                    const ans = typedAnswer;
+                    setTypedAnswer("");
+                    await mm.submitTypedAnswer(ans);
+                  }}
+                  className="flex items-center w-full gap-2 rounded-xl bg-white/[0.03] border border-white/10 px-3.5 py-2 focus-within:border-cyan-400/50 focus-within:ring-1 focus-within:ring-cyan-400/30 transition-all shadow-sm"
+                >
+                  <input
+                    type="text"
+                    value={typedAnswer}
+                    onChange={(e) => setTypedAnswer(e.target.value)}
+                    placeholder="Or type your answer here and press Enter..."
+                    disabled={mm.state === "thinking" || mm.state === "speaking" || mm.state === "listening"}
+                    className="flex-1 bg-transparent text-xs text-white placeholder:text-white/35 outline-none disabled:opacity-50"
+                  />
+                  <button
+                    type="submit"
+                    disabled={!typedAnswer.trim() || mm.state === "thinking" || mm.state === "speaking" || mm.state === "listening"}
+                    className="inline-flex items-center gap-1.5 rounded-lg px-3 py-1.5 text-xs font-semibold bg-cyan-500/20 text-cyan-300 border border-cyan-400/30 hover:bg-cyan-500/30 disabled:opacity-40 disabled:cursor-not-allowed transition-all cursor-pointer"
+                  >
+                    <Send size={12} />
+                    <span>Send</span>
+                  </button>
+                </form>
               </div>
             )}
           </div>

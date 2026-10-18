@@ -225,6 +225,7 @@ export default function Home() {
               onStart={mm.startListening}
               onStop={mm.stopListeningAndSend}
               label={mm.mode === "interview" ? "Tap to answer" : "Tap to speak"}
+              permissionError={mm.micPermissionError}
             />
           </div>
         )}

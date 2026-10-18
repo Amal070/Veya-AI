@@ -14,6 +14,7 @@ export default function MicControl({
   onStart,
   onStop,
   label = "Tap to answer",
+  permissionError = false,
 }) {
   const isListening = state === "listening";
   const isThinking = state === "thinking";
@@ -140,7 +141,7 @@ export default function MicControl({
         ) : isError ? (
           <div className="flex items-center gap-1.5 rounded-full bg-rose-950/40 border border-rose-500/25 px-3.5 py-1 text-xs text-rose-300">
             <AlertCircle size={12} />
-            <span>Microphone unavailable</span>
+            <span>{permissionError ? "Microphone unavailable" : "Connection error • Tap to retry"}</span>
           </div>
         ) : (
           <div className="flex items-center gap-2 rounded-full bg-white/[0.04] border border-white/10 px-3.5 py-1 text-xs font-medium text-white/70">

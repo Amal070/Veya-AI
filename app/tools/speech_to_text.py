@@ -1,13 +1,10 @@
 """
-Speech-to-text via faster-whisper.
-
-The whole app uses one transcription path: the client records a clip with
-MediaRecorder, uploads it as a file, and we transcribe it here. There is no
-streaming/PCM path — that machinery only existed to support a continuous
-WebSocket voice pipeline this app intentionally does not have.
+Speech-to-text with Groq Whisper Cloud API (whisper-large-v3-turbo) as primary
+ultra-fast engine (~500ms, zero server RAM usage) and faster-whisper as local fallback.
 """
 import asyncio
 import logging
+import os
 
 from faster_whisper import WhisperModel
 
@@ -29,7 +26,7 @@ class TranscriptionResult:
         self.confident = confident
         self.reason = reason
 
-    def __repr__(self) -> str:  # pragma: no cover - debug helper
+    def __repr__(self) -> str:
         return f"TranscriptionResult(text={self.text!r}, confident={self.confident}, reason={self.reason!r})"
 
 
@@ -37,8 +34,8 @@ async def _get_model() -> WhisperModel:
     global _model
     if _model is None:
         async with _model_lock:
-            if _model is None:  # double-checked locking
-                logger.info("Loading Whisper model: %s", settings.whisper_model_size)
+            if _model is None:
+                logger.info("Loading local Whisper fallback model: %s", settings.whisper_model_size)
                 _model = await asyncio.to_thread(
                     WhisperModel,
                     settings.whisper_model_size,
@@ -78,9 +75,60 @@ def _transcribe_path_sync(model: WhisperModel, audio_path: str) -> Transcription
     return _score_segments(segments, info.duration)
 
 
+async def _transcribe_groq(audio_path: str) -> TranscriptionResult | None:
+    if not settings.groq_api_key:
+        return None
+
+    try:
+        from groq import AsyncGroq
+
+        client = AsyncGroq(api_key=settings.groq_api_key)
+        filename = os.path.basename(audio_path)
+        with open(audio_path, "rb") as f:
+            audio_bytes = f.read()
+
+        if len(audio_bytes) < 100:
+            return TranscriptionResult("", False, "empty_audio")
+
+        response = await asyncio.wait_for(
+            client.audio.transcriptions.create(
+                file=(filename, audio_bytes),
+                model="whisper-large-v3-turbo",
+                response_format="verbose_json",
+                temperature=0.0,
+            ),
+            timeout=15.0,
+        )
+
+        text = (response.text or "").strip()
+        duration = getattr(response, "duration", 1.0) or 1.0
+
+        if duration < MIN_AUDIO_DURATION_SEC:
+            return TranscriptionResult("", False, "audio_too_short")
+        if not text:
+            return TranscriptionResult("", False, "no_speech_detected")
+
+        logger.info("Groq Whisper transcribed audio (%d bytes, %.1fs) -> '%s'", len(audio_bytes), duration, text[:50])
+        return TranscriptionResult(text, True)
+    except Exception as e:
+        logger.warning("Groq Whisper transcription failed, falling back to local model: %s", e)
+        return None
+
+
 async def transcribe(audio_path: str) -> TranscriptionResult:
-    """Transcribe an audio file on disk (webm/wav/mp3 — anything ffmpeg supports)."""
-    if not audio_path:
+    """Transcribe an audio file on disk with Groq LPU primary and local fallback."""
+    if not audio_path or not os.path.exists(audio_path):
         return TranscriptionResult("", False, "empty_audio")
-    model = await _get_model()
-    return await asyncio.to_thread(_transcribe_path_sync, model, audio_path)
+
+    # 1. Primary: Groq Cloud Whisper (<1s, zero server RAM)
+    groq_result = await _transcribe_groq(audio_path)
+    if groq_result is not None:
+        return groq_result
+
+    # 2. Fallback: local faster-whisper
+    try:
+        model = await _get_model()
+        return await asyncio.to_thread(_transcribe_path_sync, model, audio_path)
+    except Exception as e:
+        logger.error("All transcription engines failed on %s: %s", audio_path, e)
+        return TranscriptionResult("", False, "corrupted_audio")
