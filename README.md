@@ -2,7 +2,8 @@
 
 <div align="center">
 
-[![Live Demo](https://img.shields.io/badge/Demo-veya.web.app-brightgreen?style=for-the-badge&logo=google-chrome)](https://veya.web.app)
+[![Live Frontend](https://img.shields.io/badge/Frontend-veya--ai--frontend.onrender.com-brightgreen?style=for-the-badge&logo=render)](https://veya-ai-frontend.onrender.com)
+[![Live Backend](https://img.shields.io/badge/Backend-veya--ai--backend.onrender.com-blue?style=for-the-badge&logo=render)](https://veya-ai-backend.onrender.com)
 [![FastAPI](https://img.shields.io/badge/Backend-FastAPI_0.137+-009688?style=for-the-badge&logo=fastapi&logoColor=white)](https://fastapi.tiangolo.com)
 [![LangGraph](https://img.shields.io/badge/Orchestration-LangGraph_1.2+-FF4F00?style=for-the-badge&logo=langchain&logoColor=white)](https://www.langchain.com/langgraph)
 [![Groq](https://img.shields.io/badge/Inference-Groq_LPU-F55036?style=for-the-badge)](https://groq.com)
@@ -13,9 +14,22 @@
 
 **An intelligent, voice-first mock interview assistant that analyzes your resume, conducts adaptive multi-turn technical interviews across calibrated difficulty tiers, and delivers comprehensive rubric-based performance evaluations.**
 
-[🚀 **Explore the Live App**](https://veya.web.app) • [📖 **API Documentation**](#-api-reference) • [🛠️ **Quick Start**](#-getting-started) • [🏗️ **Architecture**](#-architecture) • [🎯 **Difficulty & Evaluation**](#-difficulty--evaluation-engine)
+[🚀 **Explore Live App**](https://veya-ai-frontend.onrender.com) • [⚡ **Swagger API Docs**](https://veya-ai-backend.onrender.com/docs) • [📖 **API Reference**](#-api-reference) • [🛠️ **Quick Start**](#-getting-started) • [🏗️ **Architecture**](#-architecture)
 
 </div>
+
+---
+
+## 🌐 Live Production Deployments
+
+Veya AI is hosted and running live in production on Render:
+
+| Service | Live URL | Description |
+|---|---|---|
+| **Frontend Web App** | [https://veya-ai-frontend.onrender.com](https://veya-ai-frontend.onrender.com) | Production React 19 + Vite 8 Mock Interview Studio |
+| **Backend API** | [https://veya-ai-backend.onrender.com](https://veya-ai-backend.onrender.com) | Production FastAPI + LangGraph + ChromaDB + Groq API |
+| **Interactive API Docs** | [https://veya-ai-backend.onrender.com/docs](https://veya-ai-backend.onrender.com/docs) | Live Swagger UI for interactive API exploration |
+| **Backend Health Check** | [https://veya-ai-backend.onrender.com/health](https://veya-ai-backend.onrender.com/health) | Live server status & LangGraph state machine health check |
 
 ---
 
@@ -265,6 +279,9 @@ npm run dev
 ---
 
 ## 📡 API Reference
+
+> **Live Production Base URL:** [`https://veya-ai-backend.onrender.com`](https://veya-ai-backend.onrender.com)  
+> **Interactive Swagger UI:** [`https://veya-ai-backend.onrender.com/docs`](https://veya-ai-backend.onrender.com/docs)
 
 ### Voice & Onboarding
 
