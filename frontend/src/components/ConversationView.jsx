@@ -1,5 +1,5 @@
 import { useEffect, useRef } from "react";
-import { MessageSquare, Mic, Sparkles } from "lucide-react";
+import { MessageSquare, Mic, Sparkles, Volume2 } from "lucide-react";
 
 /**
  * ConversationView — Professional Interview Transcript & HUD Console.
@@ -9,7 +9,7 @@ import { MessageSquare, Mic, Sparkles } from "lucide-react";
  * - Auto-scrolling to keep the latest message visible
  * - Subtle response placeholder while candidate is expected to answer
  */
-export default function ConversationView({ transcript = [], onSelectPrompt }) {
+export default function ConversationView({ transcript = [], onSelectPrompt, onSpeakText }) {
   const scrollRef = useRef(null);
 
   useEffect(() => {
@@ -156,7 +156,7 @@ export default function ConversationView({ transcript = [], onSelectPrompt }) {
                 } max-w-[88%] sm:max-w-[84%]`}
               >
                 {/* Role Header */}
-                <div className="flex items-center gap-2 mb-1 px-1">
+                <div className="flex items-center gap-2 mb-1 px-1 w-full">
                   <span className="text-[11px] font-semibold tracking-wide text-white/80">
                     {isUser ? "You" : "Veya AI"}
                   </span>
@@ -169,6 +169,18 @@ export default function ConversationView({ transcript = [], onSelectPrompt }) {
                   >
                     {isUser ? "Candidate" : "Interviewer"}
                   </span>
+                  {!isUser && onSpeakText && (
+                    <button
+                      type="button"
+                      onClick={() => onSpeakText(line.text)}
+                      className="ml-auto inline-flex items-center gap-1 text-[11px] text-cyan-300 hover:text-cyan-200 transition-colors px-2 py-0.5 rounded-md hover:bg-white/[0.08] border border-cyan-400/20 hover:border-cyan-400/40 cursor-pointer"
+                      title="Listen to question"
+                      aria-label="Listen to question aloud"
+                    >
+                      <Volume2 size={12} className="text-cyan-400" />
+                      <span>Listen</span>
+                    </button>
+                  )}
                 </div>
 
                 {/* Bubble Text */}

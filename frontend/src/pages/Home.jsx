@@ -196,7 +196,11 @@ export default function Home() {
         )}
 
         {/* Futuristic Transcript Console */}
-        <ConversationView transcript={mm.transcript} onSelectPrompt={handlePromptSelect} />
+        <ConversationView
+          transcript={mm.transcript}
+          onSelectPrompt={handlePromptSelect}
+          onSpeakText={mm.speakText}
+        />
 
         {/* Live Interview Telemetry Progress */}
         {mm.mode === "interview" && mm.currentQuestion && mm.state !== "finished" && (

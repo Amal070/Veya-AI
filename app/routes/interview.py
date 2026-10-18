@@ -86,7 +86,7 @@ async def _safe_generate_audio(text: str) -> str | None:
     response — the frontend can still show text if audio_url is null."""
     try:
         return await generate_audio(text)
-    except TTSError as e:
+    except Exception as e:
         logger.error("TTS generation failed, continuing without audio: %s", e)
         return None
 

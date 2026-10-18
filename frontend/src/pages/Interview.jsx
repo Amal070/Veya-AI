@@ -475,7 +475,7 @@ export default function Interview() {
             </div>
 
             {/* Main Stage: Conversation Transcript Panel */}
-            <ConversationView transcript={mm.transcript} />
+            <ConversationView transcript={mm.transcript} onSpeakText={mm.speakText} />
 
             {/* Question Progress & Session Actions (Single Skip & Single Quit) */}
             <InterviewProgress

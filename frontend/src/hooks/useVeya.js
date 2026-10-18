@@ -94,28 +94,125 @@ export function useVeya() {
     setTranscript((prev) => [...prev, { role, text, id: `${role}-${Date.now()}-${prev.length}` }]);
   }, []);
 
-  const playAudio = useCallback((audioUrl) => {
+  const speakWithWebSpeech = useCallback((text) => {
     return new Promise((resolve) => {
-      const url = resolveAudioUrl(audioUrl);
-      if (!url || !audioRef.current) {
+      if (typeof window === "undefined" || !("speechSynthesis" in window) || !text) {
         resolve();
         return;
       }
-      const el = audioRef.current;
-      setState("speaking");
 
-      const done = () => {
-        el.onended = null;
-        el.onerror = null;
+      try {
+        window.speechSynthesis.cancel();
+        const utterance = new SpeechSynthesisUtterance(text);
+        utterance.rate = 1.0;
+        utterance.pitch = 1.0;
+
+        const voices = window.speechSynthesis.getVoices();
+        const preferredVoice =
+          voices.find(
+            (v) =>
+              v.lang.startsWith("en") &&
+              (v.name.includes("Natural") ||
+                v.name.includes("Google") ||
+                v.name.includes("Samantha") ||
+                v.name.includes("Jenny") ||
+                v.name.includes("Guy") ||
+                v.name.includes("Aria"))
+          ) || voices.find((v) => v.lang.startsWith("en"));
+
+        if (preferredVoice) {
+          utterance.voice = preferredVoice;
+        }
+
+        setState("speaking");
+
+        const cleanup = () => {
+          utterance.onend = null;
+          utterance.onerror = null;
+          resolve();
+        };
+
+        utterance.onend = cleanup;
+        utterance.onerror = (err) => {
+          console.warn("[useVeya] Web Speech utterance error:", err);
+          cleanup();
+        };
+
+        window.speechSynthesis.speak(utterance);
+      } catch (err) {
+        console.warn("[useVeya] Web Speech API playback error:", err);
         resolve();
-      };
-
-      el.src = url;
-      el.onended = done;
-      el.onerror = done;
-      el.play().catch(() => done());
+      }
     });
   }, []);
+
+  const stopAudio = useCallback(() => {
+    if (audioRef.current) {
+      audioRef.current.pause();
+      audioRef.current.currentTime = 0;
+    }
+    if (typeof window !== "undefined" && "speechSynthesis" in window) {
+      window.speechSynthesis.cancel();
+    }
+  }, []);
+
+  const playAudio = useCallback(
+    (audioUrl, fallbackText = null) => {
+      return new Promise((resolve) => {
+        stopAudio();
+        const url = resolveAudioUrl(audioUrl);
+        if (!url || !audioRef.current) {
+          if (fallbackText) {
+            speakWithWebSpeech(fallbackText).then(resolve);
+          } else {
+            resolve();
+          }
+          return;
+        }
+
+        const el = audioRef.current;
+        setState("speaking");
+
+        const done = () => {
+          el.onended = null;
+          el.onerror = null;
+          resolve();
+        };
+
+        el.src = url;
+        el.onended = done;
+        el.onerror = () => {
+          console.warn("[useVeya] Server audio playback failed. Falling back to Web Speech API...");
+          if (fallbackText) {
+            speakWithWebSpeech(fallbackText).then(done);
+          } else {
+            done();
+          }
+        };
+
+        el.play().catch((playErr) => {
+          console.warn("[useVeya] Audio play() blocked or failed:", playErr);
+          if (fallbackText) {
+            speakWithWebSpeech(fallbackText).then(done);
+          } else {
+            done();
+          }
+        });
+      });
+    },
+    [speakWithWebSpeech, stopAudio]
+  );
+
+  const speakText = useCallback(
+    async (text, audioUrl = null) => {
+      if (recorder.isRecording) {
+        recorder.cancel();
+      }
+      await playAudio(audioUrl, text);
+      setState("idle");
+    },
+    [recorder, playAudio]
+  );
 
   // --- Intent detection ------------------------------------------------------
 
@@ -128,10 +225,11 @@ export function useVeya() {
 
   const startListening = useCallback(async () => {
     setError(null);
+    stopAudio();
     const ok = await recorder.start();
     if (ok) setState("listening");
     else setState("error");
-  }, [recorder]);
+  }, [recorder, stopAudio]);
 
   const stopListeningAndSend = useCallback(async () => {
     const blob = await recorder.stop();
@@ -148,7 +246,7 @@ export function useVeya() {
         const result = await submitAnswerVoice(sessionId, blob);
         if (result.retry) {
           pushLine("assistant", result.message);
-          await playAudio(result.audio_url);
+          await playAudio(result.audio_url, result.message);
           setState("idle");
           return;
         }
@@ -159,13 +257,14 @@ export function useVeya() {
 
         if (result.finished) {
           setReport(result.report);
-          pushLine("assistant", "That's the end of the interview. Great work!");
+          const finishMsg = "That's the end of the interview. Great work!";
+          pushLine("assistant", finishMsg);
           saveSession({
             mode: "finished",
             currentQuestion: null,
             lastFeedback: { score: result.score, feedback: result.feedback },
           });
-          await playAudio(result.audio_url);
+          await playAudio(result.audio_url, finishMsg);
           setState("finished");
           setShowReportModal(true);
           return;
@@ -198,7 +297,9 @@ export function useVeya() {
         });
 
         if (isOriginalAudio && result.audio_url) {
-          await playAudio(result.audio_url);
+          await playAudio(result.audio_url, nextQ);
+        } else {
+          await playAudio(null, nextQ);
         }
         setState("idle");
         return;
@@ -208,7 +309,7 @@ export function useVeya() {
       const result = await sendVoiceChat(blob, sessionId);
       if (result.retry) {
         pushLine("assistant", result.message);
-        await playAudio(result.audio_url);
+        await playAudio(result.audio_url, result.message);
         setState("idle");
         return;
       }
@@ -222,7 +323,7 @@ export function useVeya() {
         setShowResumeModal(true);
       }
 
-      await playAudio(result.audio_url);
+      await playAudio(result.audio_url, result.message);
       setState("idle");
     } catch (err) {
       console.error("Voice exchange failed:", err);
@@ -332,7 +433,7 @@ export function useVeya() {
           lastFeedback: null,
         });
 
-        await playAudio(data.audio_url);
+        await playAudio(data.audio_url, firstQ);
         setState("idle");
       } catch (err) {
         console.error("Failed to start interview:", err);
@@ -344,6 +445,7 @@ export function useVeya() {
   );
 
   const endInterview = useCallback(() => {
+    stopAudio();
     clearSession();
     setResumeInfo(null);
     setMode("assistant");
@@ -354,7 +456,7 @@ export function useVeya() {
     setShowReportModal(false);
     setShowQuitModal(false);
     setShowSkipModal(false);
-  }, []);
+  }, [stopAudio]);
 
   const skipQuestion = useCallback(async () => {
     if (mode !== "interview" || !sessionId || isSkipping) return;
@@ -362,9 +464,7 @@ export function useVeya() {
     if (recorder.isRecording) {
       recorder.cancel();
     }
-    if (audioRef.current) {
-      audioRef.current.pause();
-    }
+    stopAudio();
 
     setIsSkipping(true);
     setState("thinking");
@@ -380,15 +480,14 @@ export function useVeya() {
 
       if (result.finished) {
         setReport(result.report);
-        pushLine("assistant", "That concludes the interview session. Here is your evaluation report.");
+        const conclusionMsg = "That concludes the interview session. Here is your evaluation report.";
+        pushLine("assistant", conclusionMsg);
         saveSession({
           mode: "finished",
           currentQuestion: null,
           lastFeedback: { score: result.score ?? 0, feedback: result.feedback || "Question skipped." },
         });
-        if (result.audio_url) {
-          await playAudio(result.audio_url);
-        }
+        await playAudio(result.audio_url, conclusionMsg);
         setState("finished");
         setShowReportModal(true);
         setShowSkipModal(false);
@@ -423,7 +522,9 @@ export function useVeya() {
       });
 
       if (isOriginalAudio && result.audio_url) {
-        await playAudio(result.audio_url);
+        await playAudio(result.audio_url, nextQ);
+      } else {
+        await playAudio(null, nextQ);
       }
       setState("idle");
     } catch (err) {
@@ -439,9 +540,7 @@ export function useVeya() {
       if (recorder.isRecording) {
         recorder.cancel();
       }
-      if (audioRef.current) {
-        audioRef.current.pause();
-      }
+      stopAudio();
 
       if (generateReport && sessionId) {
         setIsQuitting(true);
@@ -480,6 +579,7 @@ export function useVeya() {
   );
 
   const startNewInterview = useCallback(() => {
+    stopAudio();
     clearSession();
     setResumeInfo(null);
     setShowReportModal(false);
@@ -547,6 +647,7 @@ export function useVeya() {
               { role: "assistant", text: nextQ, id: `assistant-${Date.now()}` },
             ],
           });
+          await playAudio(result.audio_url || null, nextQ);
           setState("idle");
         } else {
           pushLine("user", text);
@@ -624,7 +725,10 @@ export function useVeya() {
     resumeInfo,
     isUploadingResume,
 
-    // audio element ref the component must attach to <audio>
+    // audio element ref and voice synthesis controls
     audioRef,
+    playAudio,
+    speakText,
+    stopAudio,
   };
 }
