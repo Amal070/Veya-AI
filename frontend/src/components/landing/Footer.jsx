@@ -1,4 +1,5 @@
 import React from "react";
+import { Link } from "react-router-dom";
 
 /**
  * Footer — Clean, minimal production footer.
@@ -39,9 +40,9 @@ export default function Footer() {
           <a href="#how-it-works" className="hover:text-cyan-300 transition-colors">
             How It Works
           </a>
-          <a href="/interview" className="hover:text-cyan-300 transition-colors">
+          <Link to="/interview" className="hover:text-cyan-300 transition-colors">
             Interview Studio
-          </a>
+          </Link>
         </nav>
 
         {/* Copyright */}

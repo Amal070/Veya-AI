@@ -1,4 +1,5 @@
 import { useState } from "react";
+import { useNavigate } from "react-router-dom";
 import { ArrowLeft, SkipForward, LogOut, Loader2 } from "lucide-react";
 
 import VoiceOrb from "../components/VoiceOrb";
@@ -24,6 +25,7 @@ import CtaSection from "../components/landing/CtaSection";
 import Footer from "../components/landing/Footer";
 
 export default function Home() {
+  const navigate = useNavigate();
   const mm = useVeya();
   const [hasStarted, setHasStarted] = useState(false);
 
@@ -35,8 +37,7 @@ export default function Home() {
     mm.state === "listening" || mm.state === "thinking" || mm.state === "speaking" ? mm.state : "idle";
 
   const handleStartInterview = () => {
-    setHasStarted(true);
-    mm.requestInterview();
+    navigate("/interview");
   };
 
   const handleTalkToVeya = () => {
@@ -150,7 +151,7 @@ export default function Home() {
         <div className="flex items-center gap-3">
           {mm.mode === "assistant" && (
             <button
-              onClick={mm.requestInterview}
+              onClick={() => navigate("/interview")}
               className="hidden sm:inline-flex items-center gap-1.5 rounded-full px-3 py-1.5 text-xs font-semibold text-white transition-all duration-200 hover:scale-105 active:scale-95 cursor-pointer shadow-md"
               style={{
                 background: "linear-gradient(135deg, #3B82F6, #8B5CF6)",
@@ -233,7 +234,7 @@ export default function Home() {
         {/* Interactive Mode Upsell in Assistant Mode */}
         {mm.mode === "assistant" && mm.state === "idle" && (
           <div
-            onClick={mm.requestInterview}
+            onClick={() => navigate("/interview")}
             className="w-full flex items-center justify-between rounded-2xl p-4 transition-all duration-300 hover:scale-[1.01] cursor-pointer"
             style={{
               background: "rgba(18, 18, 36, 0.6)",
@@ -257,7 +258,7 @@ export default function Home() {
             </div>
 
             <span className="text-xs font-semibold text-cyan-300 hover:underline shrink-0 ml-3">
-              Configure Interview →
+              Enter Interview Studio →
             </span>
           </div>
         )}

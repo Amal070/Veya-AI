@@ -1,4 +1,5 @@
 import React, { useState, useEffect } from "react";
+import { Link } from "react-router-dom";
 import { Mic, ArrowRight, Menu, X } from "lucide-react";
 
 /**
@@ -63,15 +64,25 @@ export default function Navbar({ onStartInterview, onTalkToVeya }) {
           className="hidden md:flex items-center gap-1 rounded-full px-4 py-1.5 border border-white/10 bg-white/[0.03] backdrop-blur-md"
           aria-label="Main Navigation"
         >
-          {navLinks.map((link) => (
-            <a
-              key={link.label}
-              href={link.href}
-              className="px-3.5 py-1.5 text-xs font-medium text-white/70 hover:text-white hover:bg-white/[0.06] rounded-full transition-all focus:outline-none focus-visible:ring-2 focus-visible:ring-cyan-400"
-            >
-              {link.label}
-            </a>
-          ))}
+          {navLinks.map((link) =>
+            link.isRoute ? (
+              <Link
+                key={link.label}
+                to={link.href}
+                className="px-3.5 py-1.5 text-xs font-medium text-white/70 hover:text-white hover:bg-white/[0.06] rounded-full transition-all focus:outline-none focus-visible:ring-2 focus-visible:ring-cyan-400"
+              >
+                {link.label}
+              </Link>
+            ) : (
+              <a
+                key={link.label}
+                href={link.href}
+                className="px-3.5 py-1.5 text-xs font-medium text-white/70 hover:text-white hover:bg-white/[0.06] rounded-full transition-all focus:outline-none focus-visible:ring-2 focus-visible:ring-cyan-400"
+              >
+                {link.label}
+              </a>
+            )
+          )}
         </nav>
 
         {/* Desktop CTAs */}
@@ -117,16 +128,27 @@ export default function Navbar({ onStartInterview, onTalkToVeya }) {
       {mobileMenuOpen && (
         <div className="md:hidden border-b border-white/10 bg-[#070711]/95 px-5 py-5 backdrop-blur-2xl">
           <nav className="flex flex-col gap-2" aria-label="Mobile Navigation">
-            {navLinks.map((link) => (
-              <a
-                key={link.label}
-                href={link.href}
-                onClick={() => setMobileMenuOpen(false)}
-                className="px-3 py-2 rounded-lg text-sm font-medium text-white/80 hover:text-white hover:bg-white/[0.06] transition-colors"
-              >
-                {link.label}
-              </a>
-            ))}
+            {navLinks.map((link) =>
+              link.isRoute ? (
+                <Link
+                  key={link.label}
+                  to={link.href}
+                  onClick={() => setMobileMenuOpen(false)}
+                  className="px-3 py-2 rounded-lg text-sm font-medium text-white/80 hover:text-white hover:bg-white/[0.06] transition-colors"
+                >
+                  {link.label}
+                </Link>
+              ) : (
+                <a
+                  key={link.label}
+                  href={link.href}
+                  onClick={() => setMobileMenuOpen(false)}
+                  className="px-3 py-2 rounded-lg text-sm font-medium text-white/80 hover:text-white hover:bg-white/[0.06] transition-colors"
+                >
+                  {link.label}
+                </a>
+              )
+            )}
             <div className="flex flex-col gap-2.5 pt-4 mt-2 border-t border-white/10">
               <button
                 type="button"

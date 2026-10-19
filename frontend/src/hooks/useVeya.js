@@ -161,6 +161,9 @@ export function useVeya() {
       return new Promise((resolve) => {
         stopAudio();
         const url = resolveAudioUrl(audioUrl);
+        if (!audioRef.current && typeof window !== "undefined" && typeof Audio !== "undefined") {
+          audioRef.current = new Audio();
+        }
         if (!url || !audioRef.current) {
           if (fallbackText) {
             speakWithWebSpeech(fallbackText).then(resolve);
